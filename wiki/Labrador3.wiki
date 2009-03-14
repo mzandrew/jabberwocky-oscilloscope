@@ -1,11 +1,11 @@
 #summary description of the ASIC used in this project
 #labels labrador3,asic,AtoD
 
-= Introduction =
+= introduction =
 
 The AtoD converter is called a “labrador3″ or just “lab3,” and it is an ASIC that was designed for use in ANITA, an antarctic neutrino detector experiment.
 
-= Details =
+= details =
 
 It has 9 channels and holds 260 samples per channel in a switched capacitor array that can run at up to . When a trigger comes, it converts all samples to digital values with 2340 parallel Wilkinson analog to digital converters ().
 
