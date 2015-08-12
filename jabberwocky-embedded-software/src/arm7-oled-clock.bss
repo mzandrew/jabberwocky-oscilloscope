@@ -1,0 +1,50 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+.align 2
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+.align 1
+raw_adc_channel_data:	.hword	0
+
+.global beginning_of_raw_lab3_buffer_for_channel_a
+beginning_of_raw_lab3_buffer_for_channel_a:	.space 2*260
+beginning_of_raw_lab3_buffer_for_channel_b:	.space 2*260
+@beginning_of_raw_lab3_buffer_for_trigger_a:	.space 2*260
+@beginning_of_raw_lab3_buffer_for_trigger_b:	.space 2*260
+
+beginning_of_temporary_string_1:	.space 10
+beginning_of_temporary_string_2:	.space 10
+@a_redraw_is_required:	.byte 0
+
+beginning_of_temporary_string_8_characters:	.space 9	@ 8 characters long + null
+
+button_and_rotary_encoder__debounce_counters:	.space (rotary_encoder_maximum_index+1)
+
+human_readable_string:	.space 6 @ "976k" "2.40G"
+
+itoa_string:	.space 12 @ "4294967295" or "-2000000000"
+
+.align 2
+debug_stack_pointer:	.word 0
+@beginning_of_debug_stack:	.space 32*4
+beginning_of_debug_stack:	.space 64*4
+@beginning_of_debug_stack:	.space 128*4
+end_of_debug_stack:
+
+.align 2
+.global	dac_a_to_labrador3_frequency_table
+dac_a_to_labrador3_frequency_table:	.space 4*(((dac_a_maximum_allowable_value - dac_a_minimum_allowable_value + 1) / dac_a_to_labrador3_frequency_table_delta)+1)
+
+.ifne	need_sine_and_cosine_lookup_table
+.align 2
+lookup_table:	.space	2*size_of_entire_lookup_table_in_words
+.align 2
+just_after_end_of_lookup_table:
+.endif
+
+.align 2
+beginning_of_trace_1:	.space	4*number_of_datapoints_in_a_displayed_trace
+beginning_of_trace_2:	.space	4*number_of_datapoints_in_a_displayed_trace
+beginning_of_buffer_for_onboard_oscilloscope_data:	.space	4*number_of_datapoints_in_a_displayed_trace<<log_base_2_of_number_of_samples_per_displayed_point
+

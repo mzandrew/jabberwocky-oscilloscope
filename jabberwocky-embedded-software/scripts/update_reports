@@ -1,0 +1,45 @@
+#!/bin/bash -e
+
+declare base_dir="$(dirname $0)/.."
+declare script_dir="${base_dir}/scripts"
+declare destination_dir="${base_dir}/reports"
+declare archive_dir="${base_dir}/../reports"
+declare project_name="jabberwocky"
+declare nice="nice -n 15"
+
+declare script_list=" \
+	count_bytes_in_output_file \
+	wc_src \
+	wc_total \
+	find_debug_statements \
+	find_equates_that_are_not_in_an_equates_file \
+	find_macros_that_are_not_in_a_macros_file \
+	print_list_of_called_functions \
+	print_list_of_labels \
+	print_list_of_macros \
+	show_all_occurances_of_each_function_name \
+	show_all_occurances_of_each_macro_name \
+"
+
+declare date_string=$(date_func date_and_time_without_colons)
+if [ "${date_string}" = "" ]; then
+	echo "cannot run date_func" >&2
+	exit 5
+fi
+echo "${date_string}"
+for each in ${destination_dir} ${archive_dir} "${archive_dir}/${project_name}"; do
+	if [ ! -e "${each}" ]; then
+		echo "creating dir \"${each}\"..."
+		mkdir -p "${each}"
+	fi
+	if [ ! -d "${each}" ]; then
+		echo "cannot create dir \"${each}\"" >&2
+		exit 6
+	fi
+done
+
+for each in ${script_list}; do
+	echo "running script ${each}..."
+	${nice} ${script_dir}/${each} | tee "${destination_dir}/${each}" > "${archive_dir}/${project_name}/${date_string}-${each}"
+done
+

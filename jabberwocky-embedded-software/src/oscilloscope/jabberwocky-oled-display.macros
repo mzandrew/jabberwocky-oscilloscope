@@ -1,0 +1,55 @@
+
+.macro	change_vertical_scale__macro	trace
+	ldr	r0, =rotary_encoder_a_signed_delta_stable
+	ldrsb	r1, [r0]
+@		debug	r1
+	ldr	r0, =vertical_scale_for_trace_\trace
+	ldrb	r2, [r0]
+@	ldr	r4, =old_vertical_scale_for_trace_\trace
+@	mov	r5, r2
+@		ldr	r6, =0x56565656
+@		debug	r6
+@		debug	r2
+	keep_it_between_signed_ping_pong	min=vertical_scale_minimum, it=r2, max=vertical_scale_maximum
+@	strb	r2, [r4]
+@		debug	r2
+	add	r1, r1, r2
+@		debug	r1
+	keep_it_between_signed_ping_pong	min=vertical_scale_minimum, it=r1, max=vertical_scale_maximum
+@		debug	r1
+	strb	r1, [r0]
+@		call	prepare_screen_for_drawing_on_it
+@		debug	r1
+@		debug	r2
+	cmp	r2, r1
+	ldrNE	r0, =display_needs_redrawing
+	ldrNE	r1, =1
+	strNEb	r1, [r0]
+.endm
+
+.macro	change_vertical_offset__macro	trace
+	ldr	r0, =rotary_encoder_a_signed_delta_stable
+	ldrsb	r1, [r0]
+@		debug	r1
+	ldr	r0, =vertical_offset_in_pixels_for_trace_\trace
+	ldr	r2, [r0]
+@	ldr	r4, =old_vertical_offset_in_pixels_for_trace_\trace
+@	mov	r5, r2
+@		ldr	r6, =0x56565656
+@		debug	r6
+@		debug	r2
+@	str	r2, [r4]
+@		debug	r2
+	add	r1, r1, r2
+@		debug	r1
+@		debug	r1
+	str	r1, [r0]
+@		call	prepare_screen_for_drawing_on_it
+@		debug	r1
+@		debug	r2
+	cmp	r2, r1
+	ldrNE	r0, =display_needs_redrawing
+	ldrNE	r1, =1
+	strNEb	r1, [r0]
+.endm
+

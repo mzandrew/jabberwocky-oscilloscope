@@ -1,0 +1,24 @@
+#!/bin/bash -e
+
+declare dir="$(dirname $)/scripts"
+
+function process {
+	for filename; do
+		if [ -e "${filename}" ]; then
+#			echo "${filename}"
+			local count_string=$("${dir}/filter_out_comments" "${filename}" | wc)
+			echo -e "${count_string}\t${filename}"
+		fi
+	done
+}
+
+if [ "${1}" = "--no-comments" ]; then
+	process $(echo $(find src -type f)) | sort -n
+#	${dir}/wc_total --no-comments
+# recursive!
+else
+	find src -type f -exec wc {} \; | sort -n
+#	${dir}/wc_total
+# recursive!
+fi
+

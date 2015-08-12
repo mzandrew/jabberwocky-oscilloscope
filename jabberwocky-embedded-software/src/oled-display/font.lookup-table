@@ -1,0 +1,1094 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+@ This program is free software; you can redistribute it and/or modify
+@ it under the terms of the GNU General Public License as published by
+@ the Free Software Foundation; either version 3 of the License, or
+@ (at your option) any later version.
+
+@ This program is distributed in the hope that it will be useful,
+@ but WITHOUT ANY WARRANTY; without even the implied warranty of
+@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+@ GNU General Public License for more details.
+
+@ You should have received a copy of the GNU General Public License
+@ along with this program; if not, write to the Free Software
+@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+@ or visit http://www.fsf.org/
+
+.pool
+.align 2
+.text @ where lookup-tables belong
+
+.align 2
+space:	@ 32d, 20h, 40o
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+exclamation:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+doublequotes:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+poundnumber:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+dollar:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+percent:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+ampersand:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+singlequote:
+	.ascii	"     "
+	.ascii	"  '  "
+	.ascii	"  '  "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+openparenthesis:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+closeparenthesis:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+asterisk:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+plus:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+comma:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  ,  "
+	.ascii	" ,   "
+minus:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"-----"
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+dot:
+period:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  .  "
+slash:
+	.ascii	"     "
+	.ascii	"    /"
+	.ascii	"   / "
+	.ascii	"  /  "
+	.ascii	" /   "
+	.ascii	"/    "
+	.ascii	"     "
+zero:	@ 48d, 30h, 60o
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	"o o o"
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+one:
+	.ascii	"  o  "
+	.ascii	" oo  "
+	.ascii	"o o  "
+	.ascii	"  o  "
+	.ascii	"  o  "
+	.ascii	"  o  "
+	.ascii	"ooooo"
+two:
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"    o"
+	.ascii	"   o "
+	.ascii	"  o  "
+	.ascii	" o   "
+	.ascii	"ooooo"
+three:
+	.ascii	"oooo "
+	.ascii	"    o"
+	.ascii	"    o"
+	.ascii	" ooo "
+	.ascii	"    o"
+	.ascii	"    o"
+	.ascii	"oooo "
+four:
+	.ascii	"   o "
+	.ascii	"  oo "
+	.ascii	" o o "
+	.ascii	"ooooo"
+	.ascii	"   o "
+	.ascii	"   o "
+	.ascii	"   o "
+five:
+	.ascii	"ooooo"
+	.ascii	"o    "
+	.ascii	"o    "
+	.ascii	"oooo "
+	.ascii	"    o"
+	.ascii	"    o"
+	.ascii	"oooo "
+six:
+	.ascii	" ooo "
+	.ascii	"o    "
+	.ascii	"o    "
+	.ascii	"oooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+seven:
+	.ascii	"ooooo"
+	.ascii	"    o"
+	.ascii	"    o"
+	.ascii	"   o "
+	.ascii	"  o  "
+	.ascii	" o   "
+	.ascii	" o   "
+eight:
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+nine:
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" oooo"
+	.ascii	"   o "
+	.ascii	"  o  "
+	.ascii	" o   "
+colon:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  :  "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  :  "
+	.ascii	"     "
+semicolon:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  ;  "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  ;  "
+	.ascii	" ;   "
+lessthan:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+equals:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+greaterthan:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+questionmark:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+at:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+letter_A:	@ 65d, 41h, 101o
+	.ascii	"  A  "
+	.ascii	" A A "
+	.ascii	"A   A"
+	.ascii	"AAAAA"
+	.ascii	"A   A"
+	.ascii	"A   A"
+	.ascii	"A   A"
+letter_B:
+	.ascii	"BBBB "
+	.ascii	"B   B"
+	.ascii	"B   B"
+	.ascii	"BBBB "
+	.ascii	"B   B"
+	.ascii	"B   B"
+	.ascii	"BBBB "
+letter_C:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" cccc"
+	.ascii	"c    "
+	.ascii	"c    "
+	.ascii	" cccc"
+letter_D:
+	.ascii	"    d"
+	.ascii	"    d"
+	.ascii	"    d"
+	.ascii	" dddd"
+	.ascii	"d   d"
+	.ascii	"d   d"
+	.ascii	" dddd"
+letter_E:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" eee "
+	.ascii	"e   e"
+	.ascii	"eeeee"
+	.ascii	"e    "
+	.ascii	" eee "
+letter_F:
+	.ascii	"   f "
+	.ascii	"  f f"
+	.ascii	"  f  "
+	.ascii	"fffff"
+	.ascii	"  f  "
+	.ascii	"  f  "
+	.ascii	"  f  "
+letter_G:
+	.ascii	" GGG "
+	.ascii	"G   G"
+	.ascii	"G    "
+	.ascii	"G GGG"
+	.ascii	"G   G"
+	.ascii	"G   G"
+	.ascii	" GGG "
+letter_H:
+	.ascii	"H   H"
+	.ascii	"H   H"
+	.ascii	"H   H"
+	.ascii	"HHHHH"
+	.ascii	"H   H"
+	.ascii	"H   H"
+	.ascii	"H   H"
+letter_I:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"  i  "
+	.ascii	"     "
+	.ascii	"  i  "
+	.ascii	"  i  "
+	.ascii	"  i  "
+letter_J:
+	.ascii	"     "
+	.ascii	"    j"
+	.ascii	"     "
+	.ascii	"    j"
+	.ascii	"    j"
+	.ascii	"j   j"
+	.ascii	" jjj "
+letter_K:
+	.ascii	"k    "
+	.ascii	"k    "
+	.ascii	"k   k"
+	.ascii	"k kk "
+	.ascii	"kk   "
+	.ascii	"k kk "
+	.ascii	"k   k"
+letter_L:
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+letter_M:
+	.ascii	"M   M"
+	.ascii	"MM MM"
+	.ascii	"M M M"
+	.ascii	"M M M"
+	.ascii	"M   M"
+	.ascii	"M   M"
+	.ascii	"M   M"
+letter_N:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"nnnn "
+	.ascii	"n   n"
+	.ascii	"n   n"
+	.ascii	"n   n"
+letter_O:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+letter_P:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"pppp "
+	.ascii	"p   p"
+	.ascii	"pppp "
+	.ascii	"p    "
+	.ascii	"p    "
+letter_Q:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" qqqq"
+	.ascii	"q   q"
+	.ascii	" qqqq"
+	.ascii	"    q"
+	.ascii	"    q"
+letter_R:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"r rrr"
+	.ascii	"rr   "
+	.ascii	"r    "
+	.ascii	"r    "
+letter_S:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" sss "
+	.ascii	"s    "
+	.ascii	" sss "
+	.ascii	"    s"
+	.ascii	" sss "
+letter_T:
+	.ascii	"TTTTT"
+	.ascii	"  T  "
+	.ascii	"  T  "
+	.ascii	"  T  "
+	.ascii	"  T  "
+	.ascii	"  T  "
+	.ascii	"  T  "
+letter_U:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"u   u"
+	.ascii	"u   u"
+	.ascii	"u  uu"
+	.ascii	" uu u"
+letter_V:
+	.ascii	"V   V"
+	.ascii	"V   V"
+	.ascii	"V   V"
+	.ascii	"V   V"
+	.ascii	" V V "
+	.ascii	" V V "
+	.ascii	"  V  "
+letter_W:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"w   w"
+	.ascii	"w w w"
+	.ascii	"w w w"
+	.ascii	" w w "
+letter_X:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"x   x"
+	.ascii	" x x "
+	.ascii	"  x  "
+	.ascii	" x x "
+	.ascii	"x   x"
+letter_Y:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"y   y"
+	.ascii	" y y "
+	.ascii	"  y  "
+	.ascii	" y   "
+	.ascii	"y    "
+letter_Z:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"zzzzz"
+	.ascii	"   z "
+	.ascii	"  z  "
+	.ascii	" z   "
+	.ascii	"zzzzz"
+openbracket:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+backslash:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+closebracket:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+carat:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+underscore:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"     "
+opensinglequote:	@ unused (probably), so replaced with mu
+greek_mu:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"u   u"
+	.ascii	"u   u"
+	.ascii	"u   u"
+	.ascii	"uu  u"
+	.ascii	"u uu "
+
+letter_a:	@ 97d, 61h, 141o
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" aaa "
+	.ascii	"    a"
+	.ascii	" aaaa"
+	.ascii	"a   a"
+	.ascii	" aaaa"
+letter_b:
+	.ascii	"b    "
+	.ascii	"b    "
+	.ascii	"b    "
+	.ascii	"bbbb "
+	.ascii	"b   b"
+	.ascii	"b   b"
+	.ascii	" bbb "
+letter_c:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" cccc"
+	.ascii	"c    "
+	.ascii	"c    "
+	.ascii	"c    "
+	.ascii	" cccc"
+letter_d:
+	.ascii	"    d"
+	.ascii	"    d"
+	.ascii	"    d"
+	.ascii	" dddd"
+	.ascii	"d   d"
+	.ascii	"d   d"
+	.ascii	" dddd"
+letter_e:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" eee "
+	.ascii	"e   e"
+	.ascii	"eeeee"
+	.ascii	"e    "
+	.ascii	" eee "
+letter_f:
+	.ascii	"   f "
+	.ascii	"  f f"
+	.ascii	"  f  "
+	.ascii	"fffff"
+	.ascii	"  f  "
+	.ascii	"  f  "
+	.ascii	"  f  "
+letter_g:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" ggg "
+	.ascii	"g   g"
+	.ascii	" gggg"
+	.ascii	"    g"
+	.ascii	" ggg "
+letter_h:
+	.ascii	"h    "
+	.ascii	"h    "
+	.ascii	"h    "
+	.ascii	"h hh "
+	.ascii	"hh  h"
+	.ascii	"h   h"
+	.ascii	"h   h"
+letter_i:
+	.ascii	"     "
+	.ascii	"  i  "
+	.ascii	"     "
+	.ascii	"  i  "
+	.ascii	"  i  "
+	.ascii	"  i  "
+	.ascii	"  i  "
+letter_j:
+	.ascii	"    j"
+	.ascii	"     "
+	.ascii	"    j"
+	.ascii	"    j"
+	.ascii	"    j"
+	.ascii	" j  j"
+	.ascii	"  jj "
+letter_k:
+	.ascii	"k    "
+	.ascii	"k    "
+	.ascii	"k   k"
+	.ascii	"k kk "
+	.ascii	"kk   "
+	.ascii	"k kk "
+	.ascii	"k   k"
+letter_l:
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+	.ascii	"  l  "
+letter_m:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"mmmm "
+	.ascii	"m m m"
+	.ascii	"m m m"
+	.ascii	"m m m"
+	.ascii	"m m m"
+letter_n:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"nnnn "
+	.ascii	"n   n"
+	.ascii	"n   n"
+	.ascii	"n   n"
+	.ascii	"n   n"
+letter_o:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" ooo "
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	"o   o"
+	.ascii	" ooo "
+letter_p:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"pppp "
+	.ascii	"p   p"
+	.ascii	"pppp "
+	.ascii	"p    "
+	.ascii	"p    "
+letter_q:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" qqqq"
+	.ascii	"q   q"
+	.ascii	" qqqq"
+	.ascii	"    q"
+	.ascii	"    q"
+letter_r:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"r rr "
+	.ascii	"rr  r"
+	.ascii	"r    "
+	.ascii	"r    "
+	.ascii	"r    "
+letter_s:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	" sss "
+	.ascii	"s    "
+	.ascii	" sss "
+	.ascii	"    s"
+	.ascii	" sss "
+letter_t:
+	.ascii	"  t  "
+	.ascii	"  t  "
+	.ascii	"ttttt"
+	.ascii	"  t  "
+	.ascii	"  t  "
+	.ascii	"  t  "
+	.ascii	"  t  "
+letter_u:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"u   u"
+	.ascii	"u   u"
+	.ascii	"u   u"
+	.ascii	"u  uu"
+	.ascii	" uu u"
+letter_v:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"v   v"
+	.ascii	"v   v"
+	.ascii	"v   v"
+	.ascii	" v v "
+	.ascii	"  v  "
+letter_w:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"w   w"
+	.ascii	"w   w"
+	.ascii	"w w w"
+	.ascii	"w w w"
+	.ascii	" w w "
+letter_x:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"x   x"
+	.ascii	" x x "
+	.ascii	"  x  "
+	.ascii	" x x "
+	.ascii	"x   x"
+letter_y:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"y   y"
+	.ascii	" y y "
+	.ascii	"  y  "
+	.ascii	" y   "
+	.ascii	"y    "
+letter_z:
+	.ascii	"     "
+	.ascii	"     "
+	.ascii	"zzzzz"
+	.ascii	"   z "
+	.ascii	"  z  "
+	.ascii	" z   "
+	.ascii	"zzzzz"
+
+@	.ascii	"     "
+
+jabberwocky:
+	.string	"jabberwocky"
+
+programming_string:
+	.string	"programming"
+
+verified_string:
+	.string	"verified"
+
+rebooting_string:
+	.string "rebooting"
+
+testmessage:
+	.string	" 10ns   5V"
+
+allcharacters:
+	.string " !#$%^'()*+,-./" @ double-quotes is missing here
+	.string	"0123456789:;<=>?@"
+	.string "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	.string "[\]^_`" @ ` will appear as a greek mu
+	.string "abcdefghijklmnopqrstuvwxyz"
+
+author:
+	.string "mza"
+
+.set	time_string_length_including_termination, 6
+.set	time_padding_length, 2
+.set	time_threshold_length, 4
+.set	time_threshold_offset_from_beginning_of_element, time_string_length_including_termination+time_padding_length
+.set	time_table_element_length, time_string_length_including_termination+time_padding_length+time_threshold_length
+
+.align 2
+time_table_beginning:
+seconds_one:
+		.string "   1s"
+		.hword	0
+		.word double_precision_fixed_point__one
+
+milliseconds_500:
+		.string	"500ms"
+		.hword	2
+		.word double_precision_fixed_point__zero_point_500000000
+milliseconds_200:
+		.string	"200ms"
+		.hword	5
+		.word double_precision_fixed_point__zero_point_200000000
+milliseconds_100:
+		.string	"100ms"
+		.hword	10
+		.word double_precision_fixed_point__zero_point_100000000
+milliseconds_050:
+		.string	" 50ms"
+		.hword	20
+		.word double_precision_fixed_point__zero_point_050000000
+milliseconds_020:
+		.string	" 20ms"
+		.hword	50
+		.word double_precision_fixed_point__zero_point_020000000
+milliseconds_010:
+		.string	" 10ms"
+		.hword	100
+		.word double_precision_fixed_point__zero_point_010000000
+milliseconds_005:
+		.string	"  5ms"
+		.hword	200
+		.word double_precision_fixed_point__zero_point_005000000
+milliseconds_002:
+		.string	"  2ms"
+		.hword	500
+		.word double_precision_fixed_point__zero_point_002000000
+milliseconds_001:
+		.string	"  1ms"
+		.hword	1000
+		.word double_precision_fixed_point__zero_point_001000000
+
+microseconds_500:
+		.string	"500`s"
+		.hword	2000
+		.word double_precision_fixed_point__zero_point_000500000
+microseconds_200:
+		.string	"200`s"
+		.hword	5000
+		.word double_precision_fixed_point__zero_point_000200000
+microseconds_100:
+		.string	"100`s"
+		.hword	10000
+		.word double_precision_fixed_point__zero_point_000100000
+microseconds_050:
+		.string	" 50`s"
+		.hword	20000
+		.word double_precision_fixed_point__zero_point_000050000
+microseconds_020:
+		.string	" 20`s"
+		.hword	50000
+		.word double_precision_fixed_point__zero_point_000020000
+microseconds_010:
+		.string	" 10`s"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000010000
+microseconds_005:
+		.string	"  5`s"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000005000
+microseconds_002:
+		.string	"  2`s"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000002000
+microseconds_001:
+		.string	"  1`s"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000001000
+
+nanoseconds_500:
+		.string	"500ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000500
+nanoseconds_200:
+		.string	"200ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000200
+nanoseconds_100:
+		.string	"100ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000100
+nanoseconds_050:
+		.string	" 50ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000050
+nanoseconds_020:
+		.string	" 20ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000020
+nanoseconds_010:
+		.string	" 10ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000010
+nanoseconds_005:
+		.string	"  5ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000005
+nanoseconds_002:
+		.string	"  2ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000002
+nanoseconds_001:
+		.string	"  1ns"
+		.hword	0
+		.word double_precision_fixed_point__zero_point_000000001
+
+.set	Voltage_string_length_including_termination, 6
+.set	Voltage_padding_length, 2
+.set	Voltage_threshold_length, 4
+.set	Voltage_inverse_length, 4
+.set	Voltage_threshold_offset_from_beginning_of_element, Voltage_string_length_including_termination+Voltage_padding_length
+.set	Voltage_inverse_offset_from_beginning_of_element, Voltage_string_length_including_termination+Voltage_padding_length+Voltage_threshold_length
+.set	Voltage_table_element_length, Voltage_string_length_including_termination+Voltage_padding_length+Voltage_threshold_length+Voltage_inverse_length
+
+.align 2
+Voltage_table_beginning:
+Volts_32:
+		.string "  32V"
+		.hword	0
+		.word 32*fixed_point__one
+		.word fixed_point__one/32
+Volts_16:
+		.string "  16V"
+		.hword	0
+		.word 16*fixed_point__one
+		.word fixed_point__one/16
+Volts_8:
+		.string "   8V"
+		.hword	0
+		.word 8*fixed_point__one
+		.word fixed_point__one/8
+Volts_4:
+		.string "   4V"
+		.hword	0
+		.word 4*fixed_point__one
+		.word fixed_point__one/4
+Volts_2:
+		.string "   2V"
+		.hword	0
+		.word 2*fixed_point__one
+		.word fixed_point__one/2
+Volts_1:
+		.string "   1V"
+		.hword	0
+		.word fixed_point__one
+		.word fixed_point__one
+milliVolts_500:
+		.string	"500mV"
+		.hword	0
+		.word fixed_point__zero_point_500000
+		.word fixed_point__one
+milliVolts_200:
+		.string	"200mV"
+		.hword	0
+		.word fixed_point__zero_point_200000
+		.word fixed_point__one
+milliVolts_100:
+		.string	"100mV"
+		.hword	0
+		.word fixed_point__zero_point_100000
+		.word fixed_point__one
+milliVolts_050:
+		.string	" 50mV"
+		.hword	0
+		.word fixed_point__zero_point_050000
+		.word fixed_point__one
+milliVolts_020:
+		.string	" 20mV"
+		.hword	0
+		.word fixed_point__zero_point_020000
+		.word fixed_point__one
+milliVolts_010:
+		.string	" 10mV"
+		.hword	0
+		.word fixed_point__zero_point_010000
+		.word fixed_point__one
+milliVolts_005:
+		.string	"  5mV"
+		.hword	0
+		.word fixed_point__zero_point_005000
+		.word fixed_point__one
+milliVolts_002:
+		.string	"  2mV"
+		.hword	0
+		.word fixed_point__zero_point_002000
+		.word fixed_point__one
+milliVolts_001:
+		.string	"  1mV"
+		.hword	0
+		.word fixed_point__zero_point_001000
+		.word fixed_point__one
+microVolts_500:
+		.string	"500`V"
+		.hword	0
+		.word fixed_point__zero_point_000500
+		.word fixed_point__one
+microVolts_200:
+		.string	"200`V"
+		.hword	0
+		.word fixed_point__zero_point_000200
+		.word fixed_point__one
+microVolts_100:
+		.string	"100`V"
+		.hword	0
+		.word fixed_point__zero_point_000100
+		.word fixed_point__one
+
+@beginning_of_rotary_encoder_a_oscilloscope_mode_table:
+rotary_encoder_a_oscilloscope_mode_change_vertical_scale_for_channel_a_string:
+	.string "v-scale "
+rotary_encoder_a_oscilloscope_mode_change_vertical_offset_for_channel_a_string:
+	.string "v-offset"
+rotary_encoder_a_oscilloscope_mode_change_vertical_scale_for_channel_b_string:
+	.string "v-scale "
+rotary_encoder_a_oscilloscope_mode_change_vertical_offset_for_channel_b_string:
+
+rotary_encoder_b_oscilloscope_mode_change_horizontal_scale_for_channel_a_string:
+rotary_encoder_b_oscilloscope_mode_change_horizontal_scale_for_channel_b_string:
+	.string "h-scale "
+@rotary_encoder_b_oscilloscope_mode_change_horizontal_offset_for_channel_a_string:
+@rotary_encoder_b_oscilloscope_mode_change_horizontal_offset_for_channel_b_string:
+@	.string "h-offset"
+rotary_encoder_b_oscilloscope_mode_change_trigger_level_for_channel_a_string:
+rotary_encoder_b_oscilloscope_mode_change_trigger_level_for_channel_b_string:
+	.string "tr-level"
+
+.ifc	junk,junka
+Jabberwocky_by_Lewis_Carroll_short:
+	.string "'Twas brillig,"
+	.string "  and the slithy"
+	.string "  toves did gyre"
+	.string "   and gimble in"
+	.string "       the wabe:"
+	.string "All mimsy were"
+	.string "  the borogoves,"
+	.string "    and the mome"
+	.string " raths outgrabe."
+end_of_Jabberwocky_by_Lewis_Carroll_short:
+.endif
+
+Jabberwocky_by_Lewis_Carroll_short_2:
+	@        12345678123456781234
+	.string "'Twas brillig, and"
+	.string "    the slithy toves"
+	.string " did gyre and gimble"
+	.string "        in the wabe:"
+	.string "All mimsy were the"
+	.string "          borogoves,"
+	.string "  and the mome raths"
+	.string "           outgrabe."
+	.byte 0
+@end_of_Jabberwocky_by_Lewis_Carroll_short_2:
+
+.ifc	junk,asdf
+Jabberwocky_by_Lewis_Carroll:
+	.string "`Twas brillig, and the slithy toves"
+	.string "Did gyre and gimble in the wabe:"
+	.string "All mimsy were the borogoves,"
+	.string "And the mome raths outgrabe."
+
+	.string "'Beware the Jabberwock, my son!"
+	.string "The jaws that bite, the claws that catch!"
+	.string "Beware the Jubjub bird, and shun"
+	.string "The frumious Bandersnatch!'"
+
+	.string "He took his vorpal sword in hand:"
+	.string "Long time the manxome foe he sought --"
+	.string "So rested he by the Tumtum tree,"
+	.string "And stood awhile in thought."
+
+	.string "And, as in uffish thought he stood,"
+	.string "The Jabberwock, with eyes of flame,"
+	.string "Came whiffling through the tulgey wood,"
+	.string "And burbled as it came!"
+
+	.string "One, two! One, two! And through and through"
+	.string "The vorpal blade went snicker-snack!"
+	.string "He left it dead, and with its head"
+	.string "He went galumphing back."
+
+	.string "'And, has thou slain the Jabberwock?"
+	.string "Come to my arms, my beamish boy!"
+	.string "O frabjous day! Callooh! Callay!'"
+	.string "He chortled in his joy."
+
+	.string "`Twas brillig, and the slithy toves"
+	.string "Did gyre and gimble in the wabe;"
+	.string "All mimsy were the borogoves,"
+	.string "And the mome raths outgrabe."
+end_of_Jabberwocky_by_Lewis_Carroll:
+.endif
+
+.align 2
+ 

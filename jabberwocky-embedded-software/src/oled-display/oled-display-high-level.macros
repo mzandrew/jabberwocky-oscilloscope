@@ -1,0 +1,202 @@
+@ ============================================================================
+@ high level stuff that uses the onboard display controller functions
+@ ============================================================================
+
+@ ============================================================================
+@ commonly used macros
+@ ============================================================================
+
+.macro	display_turn_all_pixels_on
+	display_write_command_immediate	0xa5	@ turn all pixels on (white)
+.endm
+
+.macro	display_turn_all_pixels_off
+	display_write_command_immediate	0xa4	@ turn all pixels off (black)
+.endm
+
+.macro	display_normal_mode
+	display_write_command_immediate	0xa6	@ normal display
+.endm
+
+.macro	display_sleep_mode_on
+	display_write_command_immediate	0xae	@ sleep mode on (this turns off the display)
+.endm
+
+.macro	display_sleep_mode_off
+	display_write_command_immediate	0xaf	@ sleep mode off
+.endm
+
+.macro	display_set_start_column_and_end_column	start_column_register, end_column_register, saveregs=no
+	push	\end_column_register
+	push	\start_column_register
+	display_write_command_immediate	command=0x15, saveregs=\saveregs
+	pop	\start_column_register
+	display_write_data_register	data_register=\start_column_register, saveregs=\saveregs
+	pop	\end_column_register
+	display_write_data_register	data_register=\end_column_register, mode_is_already_set=yes, saveregs=\saveregs
+.endm
+
+.macro	display_set_start_row_and_end_row	start_row_register, end_row_register, saveregs=no
+	push	\end_row_register
+	push	\start_row_register
+	display_write_command_immediate	command=0x75, saveregs=\saveregs
+	pop	\start_row_register
+	display_write_data_register	data_register=\start_row_register, saveregs=\saveregs
+	pop	\end_row_register
+	display_write_data_register	data_register=\end_row_register, mode_is_already_set=yes, saveregs=\saveregs
+.endm
+
+.macro	display_set_master_current_from_register	master_current_register
+	push	\master_current_register
+	display_write_command_immediate	0xc7
+	@display_write_data_immediate	0x0f	@ set master current to maximum
+	pop	\master_current_register
+	display_write_data_register	\master_current_register	@ set master current
+.endm
+
+@ ============================================================================
+@ less than commonly used macros
+@ ============================================================================
+
+.macro	display_set_color_of_single_pixel	x_coordinate_register, y_coordinate_register, color_register, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r12
+	.endif
+	push	\color_register
+	push	\y_coordinate_register
+@	ldr	\y_coordinate_register, =1
+@	add	\y_coordinate_register, \y_coordinate_register, \x_coordinate_register
+@	display_set_start_column_and_end_column	start_column_register=\x_coordinate_register end_column_register=\y_coordinate_register
+	display_set_start_column_and_end_column	start_column_register=\x_coordinate_register end_column_register=\x_coordinate_register
+	pop	\y_coordinate_register
+@	ldr	\x_coordinate_register, =1
+@	add	\x_coordinate_register, \x_coordinate_register, \y_coordinate_register
+@	display_set_start_row_and_end_row	start_row_register=\x_coordinate_register end_row_register=\y_coordinate_register
+	display_set_start_row_and_end_row	start_row_register=\y_coordinate_register end_row_register=\y_coordinate_register
+	display_write_command_immediate	0x5c	@ all further data is display ram data
+	pop	\color_register
+	push	\color_register
+	mov	\color_register, \color_register, lsr #9
+@	ldr	\x_coordinate_register, =0xfffffffff
+@	and	\y_coordinate_register, \x_coordinate_register, \y_coordinate_register
+	display_write_data_register	\color_register
+	pop	\color_register
+	display_write_data_register	\color_register
+	.ifc	\saveregs,yes
+		pop	r0-r12
+	.endif
+.endm
+
+.macro	draw_circle	center_x_register, center_y_register, radius_register, line_color_register, fill_color_register
+	push	\fill_color_register
+	push	\fill_color_register
+	push	\line_color_register
+	push	\line_color_register
+	push	\radius_register
+	push	\center_y_register
+	push	\center_x_register
+	display_write_command_immediate	0x86
+	pop	\center_x_register
+	display_write_data_register	\center_x_register
+	pop	\center_y_register
+	display_write_data_register	\center_y_register
+	pop	\radius_register
+	display_write_data_register	\radius_register
+	pop	\line_color_register
+	mov	\line_color_register, \line_color_register, lsr #9
+	display_write_data_register	\line_color_register
+	pop	\line_color_register
+	display_write_data_register	\line_color_register
+	pop	\fill_color_register
+	mov	\fill_color_register, \fill_color_register, lsr #9
+	display_write_data_register	\fill_color_register
+	pop	\fill_color_register
+	display_write_data_register	\fill_color_register
+.endm
+
+.macro	draw_line	left_register, right_register, top_register, bottom_register, color_register, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r12	@ bug/future: this could be more efficient; have to check the macros below
+	.endif
+	push	\color_register
+	push	\color_register
+	push	\bottom_register
+	push	\right_register
+	push	\top_register
+	push	\left_register
+	display_write_command_immediate	0x83
+	pop	\left_register
+	display_write_data_register	\left_register
+	pop	\top_register
+	display_write_data_register	\top_register
+	pop	\right_register
+	display_write_data_register	\right_register
+	pop	\bottom_register
+	display_write_data_register	\bottom_register
+	pop	\color_register
+	mov	\color_register, \color_register, lsr #9
+	display_write_data_register	\color_register
+	pop	\color_register
+	display_write_data_register	\color_register
+	.ifc	\saveregs,yes
+		pop	r0-r12	@ bug/future: this could be more efficient; have to check the macros below
+	.endif
+.endm
+
+.macro	draw_line_imm	left, right, top, bottom, color_cb, color_ba
+	display_write_command_immediate	0x83
+	display_write_data_immediate	\left
+	display_write_data_immediate	\top
+	display_write_data_immediate	\right
+	display_write_data_immediate	\bottom
+	display_write_data_immediate	\color_cb
+	display_write_data_immediate	\color_ba
+.endm
+
+.macro	change_display_mode_to_fill_rectangles_and_circles
+	display_write_command_immediate	0x92
+	display_write_data_immediate	0x01	@ fill rectangles and circles
+.endm
+
+.macro	change_display_mode_to_NOT_fill_rectangles_and_circles
+	display_write_command_immediate	0x92
+	display_write_data_immediate	0x0	@ don't fill rectangles and circles
+.endm
+
+.macro	write_pixel	color_register
+	push	r0-r5
+	mov	r4, \color_register
+	mov	r5, r4, lsr #9
+	display_write_data_register     data_register=r5
+	display_write_data_register     data_register=r4
+	pop	r0-r5
+.endm
+
+.macro	display_write_pixel_setup	color_register, temporary_register_0, temporary_register_1, temporary_register_2, temporary_register_3, temporary_register_4
+	@ this is a quick inner-loop macro
+	@ all given registers are destroyed!
+	ldr \temporary_register_0, =display_data_bus_port
+	ldr \temporary_register_4, =display_control_signals_port
+	ldr	\temporary_register_1, =bit00
+	mov	\temporary_register_2, \temporary_register_1, lsl #display_cs_active_low_is_port_bit
+.endm
+
+.macro	display_write_pixel	color_register, temporary_register_0, temporary_register_1, temporary_register_2, temporary_register_3, temporary_register_4
+	@ this is a quick inner-loop macro
+	@ all given registers are destroyed!
+	mov	\temporary_register_3, \color_register, lsr #9
+	.ifnc	display_data_bus_shift,0
+		@ this might be more efficient if it were combined with the above shift...
+		@ but we have to be careful so that the bits aren't shifted to nothingness before being used
+		@ (if the data bus is the most significant 9 bits of the port in question)
+		mov	\temporary_register_3, \temporary_register_3, lsl #display_data_bus_shift
+		mov	\color_register, \color_register, lsl #display_data_bus_shift
+	.endif
+	str	\temporary_register_3, [\temporary_register_0, #Output_Data_Status_Register_offset]	@ load data bus with data
+	str	\temporary_register_2, [\temporary_register_4, #Clear_Output_Data_Register_offset]	@ activate chip select
+	str	\temporary_register_2, [\temporary_register_4, #Set_Output_Data_Register_offset]	@ deactivate chip select
+	str	\color_register, [\temporary_register_0, #Output_Data_Status_Register_offset]	@ load data bus with data
+	str	\temporary_register_2, [\temporary_register_4, #Clear_Output_Data_Register_offset]	@ activate chip select
+	str	\temporary_register_2, [\temporary_register_4, #Set_Output_Data_Register_offset]	@ deactivate chip select
+.endm
+

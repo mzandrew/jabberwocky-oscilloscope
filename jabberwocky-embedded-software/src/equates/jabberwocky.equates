@@ -1,0 +1,383 @@
+@ the equates in this file are all consequences of choices made in user-modifiable.equates
+
+@ there can be gaps in the following
+@ but not between rotary encoder pairs
+@ the rotary encoders must all be at higher indexes than the buttons
+@ the min/max for each must at least include the entries you want processed, although they can include gaps
+@ the number of gaps between rot_enc_max_ind and the last entry must be an even number
+@ button_min need not be set
+@ most processing goes from rot_enc_max_ind down to 0 anyway...
+@.set	button_minimum_index, 0
+.set	button_1__index, 0
+.set	button_2__index, 1
+.set	button_a__index, 2
+.set	button_b__index, 3
+.set	button_maximum_index, 3
+.set	rotary_encoder_minimum_index, 4
+.set	rotary_encoder_a_a__index, 4
+.set	rotary_encoder_a_b__index, 5
+.set	rotary_encoder_b_a__index, 6
+.set	rotary_encoder_b_b__index, 7
+.set	rotary_encoder_maximum_index, 7
+
+.if	mode & use_TC0_and_TC1_for_trigger_delay
+	.set	trigger_delay_available, 1
+.endif
+
+.if	mode & use_TC0_for_AtoD_timing
+	.set	onboard_oscilloscope_available, 1
+	.set	timer_counter_channel_for_onboard_oscilloscope_triggering, TC0
+.endif
+
+@ sanity check:
+.if	mode & use_TC0_for_AtoD_timing
+	.if	mode & use_TC0_and_TC1_for_trigger_delay
+		.error	"using TC0 for two purposes"
+	.endif
+.endif
+
+@ sanity check:
+.if	mode & use_TC2_for_millisecond_delays
+	.if	mode & use_TC2_for_RCO_measurement
+		.error	"using TC2 for two purposes"
+	.endif
+.endif
+
+.ifndef	trigger_delay_available
+	.warning "no trigger delay functionality is available"
+.endif
+
+.if	mode & use_TC2_for_RCO_measurement
+	.set	timer_counter_channel_for_measuring_frequency_of_RCO, TC2
+.endif
+
+.ifeq	model-prototypeoscilloscope
+	@.set	use_pll, 0
+	.set	rc_clock_frequency, 29971
+	.set	rotary_encoder_a_a_port_a_bit, 17
+	.set	rotary_encoder_a_b_port_a_bit, 18
+	.set	display_control_signals_port, PIOA
+	.set	display_rd_active_low_is_port_bit, 27
+	.set	display_wr_active_low_is_port_bit, 28
+	.set	display_cs_active_low_is_port_bit, 29
+	.set	display_d_high_c_low_is_port_bit, 30
+	.set	display_data_bus_port, PIOA
+	.set	display_data_bus_bit_0_is_port_bit, 0
+	.set	display_data_bus_shift, display_data_bus_bit_0_is_port_bit
+	.set	data_bus_port_bitmask, 0b111111111<<display_data_bus_shift	@ bits PA0 to PA8 (a 9-bit interface)
+	.set	TCX, TC2	@ this is for the millisecond delays
+@	.set	TCX, TC0	@ this is for the millisecond delays
+	.set	number_of_milliseconds_to_debounce_rotary_encoder, 4
+	.set	number_of_milliseconds_to_debounce_button, 4
+	.set	general_purpose_output_a, 26	@ pin=26
+	.set	general_purpose_output_b, 21	@ pin=11
+	.set	general_purpose_output_c, 19	@ pin=13
+	.set	display_reset_port_a_bit, 22
+	.set	rotary_encoder_a_port_a_bitmask, 1<<rotary_encoder_a_a_port_a_bit + 1<<rotary_encoder_a_b_port_a_bit
+	.set	button_c_port_a_bit, 31	@ pin=52
+@		.set	spi_port_a_bitmask, 0b111100000000000
+		.set	clock_block_size, 8
+	.if	mode & use_onboard_oscilloscope_functionality
+		@bugmza
+		.set	horizontal_scale_minimum, 4
+		.set	horizontal_scale_maximum, 18
+		@ 100ms down to 2us - at 8MHz, 125ns/div * 12 pixels/division = 1.5us
+	.else
+		.set	horizontal_scale_minimum, 1
+@		.set	horizontal_scale_maximum, 28	@ 3 levels for each of 9 decades, plus an endpoint (1s down to 1ns)
+		.set	horizontal_scale_maximum, 26	@ 1s down to 5ns (due to 12 pixels / division)
+		.error "boingo"
+	.endif
+	.set	vertical_scale_minimum, 1
+	.set	vertical_scale_maximum, 18	@ 3 levels for each of 4 decades, plus one endpoint (32V down to 100uV)
+	.set	rotary_encoder_a_oscilloscope_mode_minimum, 1
+	.set	rotary_encoder_a_oscilloscope_mode_maximum, 3
+@	.set	rotary_encoder_a_oscilloscope_mode_maximum, 8
+	.set	i2c_controller_available, 0
+.endif
+
+.ifeq	model-oscilloscoperev00
+	@.set	use_pll, 1
+	.set	rc_clock_frequency, 29163
+	.set	oscilloscoperev00_clock_frequency, 25000000
+@	.set	display_rd_port_a_bit, 30
+@	.set	display_wr_port_a_bit, 29
+@	.set	display_cs_port_a_bit, 28
+@	.set	display_dc_port_a_bit, 27
+	.set	display_control_signals_port, PIOB
+	.set	display_rd_active_low_is_port_bit, 0
+	.set	display_wr_active_low_is_port_bit, 1
+	.set	display_cs_active_low_is_port_bit, 2
+	.set	display_d_high_c_low_is_port_bit, 3
+	.set	display_data_bus_port, PIOA
+	.set	display_data_bus_bit_0_is_port_bit, 4
+	.set	display_data_bus_shift, display_data_bus_bit_0_is_port_bit
+	.set	display_data_bus_port_bitmask, 0b111111111<<display_data_bus_shift	@ bits PA4 to PA12 (a 9-bit interface)
+	.set	lab3_channel_address_bus_port, PIOB
+	.set	lab3_channel_address_bus_bit_0_is_port_bit, 5
+	.set	lab3_channel_address_bus_shift, lab3_channel_address_bus_bit_0_is_port_bit
+	.set	lab3_channel_address_bus_port_bitmask, 0b1111<<lab3_channel_address_bus_shift
+	.set	lab3_address_bus_port, PIOA
+	.set	lab3_address_bus_bit_0_is_port_bit, 24
+	.set	lab3_address_bus_shift, lab3_address_bus_bit_0_is_port_bit
+	.set	lab3_address_bus_port_bitmask, 0b11111111<<lab3_address_bus_shift
+	.set	lab3_data_bus_port, PIOB
+	.set	lab3_data_bus_bit_0_is_port_bit, 17
+	.set	lab3_data_bus_shift, lab3_data_bus_bit_0_is_port_bit
+	.set	lab3_data_bus_port_bitmask, 0b1111111111111<<lab3_data_bus_shift @ 13 bits = 12 bits of data + hitbus as msb
+	.set	TCX, TC3	@ this is for the millisecond delays (debouncing)
+	@.set	number_of_milliseconds_to_debounce_rotary_encoder_1, 8
+	@.set	number_of_milliseconds_to_debounce_rotary_encoder_2, 8
+	.set	number_of_milliseconds_to_debounce_rotary_encoder, 4
+	.set	number_of_milliseconds_to_debounce_button, 4
+	.set	display_reset_port_a_bit, 14
+		.set	general_purpose_output_a, 15 @ pin 46
+		.set	general_purpose_output_b, 16 @ pin 47
+		.set	general_purpose_output_c, 17 @ pin 48
+	.if	mode & use_onboard_oscilloscope_functionality
+		@bugmza
+		.set	horizontal_scale_minimum, 4
+		.set	horizontal_scale_maximum, 18
+		@ 100ms down to 2us - at 8MHz, 125ns/div * 12 pixels/division = 1.5us
+	.else
+		.set	horizontal_scale_minimum, 16	@ can't get lab3 to go below about 300kHz and it does something weird at #15
+@		.set	horizontal_scale_maximum, 28	@ 3 levels for each of 9 decades, plus an endpoint (1s down to 1ns)
+		.set	horizontal_scale_maximum, 26	@ 1s down to 5ns (due to 12 pixels / division)
+	.endif
+	.set	vertical_scale_minimum, 1
+	.set	vertical_scale_maximum, 18	@ 3 levels for each of 4 decades, plus one endpoint (32V down to 100uV)
+	.set	rotary_encoder_a_oscilloscope_mode_minimum, 1
+	.set	rotary_encoder_a_oscilloscope_mode_change_vertical_scale_for_channel_a, 1
+	.set	rotary_encoder_a_oscilloscope_mode_change_vertical_offset_for_channel_a, 2
+	.set	rotary_encoder_a_oscilloscope_mode_maximum, 2
+	.set	rotary_encoder_b_oscilloscope_mode_minimum, 1
+	.set	rotary_encoder_b_oscilloscope_mode_change_horizontal_scale_for_channel_a, 1
+	.set	rotary_encoder_b_oscilloscope_mode_change_trigger_level_for_channel_a, 2
+	.set	rotary_encoder_b_oscilloscope_mode_maximum, 2
+@	.set	rotary_encoder_a_mode_minimum, 1
+@	.set	rotary_encoder_a_mode_maximum, 2
+@	.set	rotary_encoder_b_mode_minimum, 1
+@	.set	rotary_encoder_b_mode_maximum, 2
+	.set	i2c_controller_available, 1
+	.set	enable_2.5V_port_a_bit, 21
+.endif
+
+.ifeq	samfamily-at91sam7s
+	.set	CAL_output__port_a_bit_number, 2			@ PCK2 = peripheral a on port a - this conflicts
+	.set	enable_2_point_5_Volts__port_a_bit_number, 26
+	.set	seltail_port_a_bit_number, 25
+	.set	selmain_port_a_bit_number, 20
+	.set	trigger_delay__trigger_b__port_a_bit_number, 4		@ TCLK0 = peripheral b on port a - this conflicts
+	.set	trigger_delay__trigger_a__port_a_bit_number, 28		@ TCLK1 = peripheral b on port a - this conflicts
+	.set	trigger_delay__RCO__port_a_bit_number, 29		@ TCLK2 = peripheral b on port a - this conflicts
+	.set	trigger_delay__nRUN__port_a_bit_number, 0		@ TIOA0 = peripheral b on port a - this conflicts
+	.set	trigger_delay__trigger_registered__port_a_bit_number, 1	@ TIOB0 = peripheral b on port a - this conflicts
+	.set	trigger_delay__RAMP__port_a_bit_number, 15		@ TIOA1 = peripheral b on port a
+	.set	trigger_delay__GCLOCK_GATE__port_a_bit_number, 16	@ TIOB1 = peripheral b on port a
+.endif
+
+.ifeq	samfamily-at91sam7a3
+	.set	CAL_output__port_a_bit_number, 20			@ PCK2 = peripheral b on port a
+	.set	enable_2_point_5_Volts__port_a_bit_number, 21
+	.set	seltail_port_a_bit_number, 22
+	.set	selmain_port_a_bit_number, 23
+	.set	trigger_delay__trigger_b__port_b_bit_number, 9			@ TCLK0 = peripheral a on port b
+	.set	trigger_delay__trigger_a__port_b_bit_number, 10			@ TCLK1 = peripheral a on port b
+	.set	trigger_delay__RCO__port_b_bit_number, 11			@ TCLK2 = peripheral a on port b
+	.set	trigger_delay__nRUN__port_b_bit_number, 12			@ TIOA0 = peripheral a on port b
+	.set	trigger_delay__trigger_registered__port_b_bit_number, 13	@ TIOB0 = peripheral a on port b
+	.set	trigger_delay__RAMP__port_b_bit_number, 14			@ TIOA1 = peripheral a on port b
+	.set	trigger_delay__GCLOCK_GATE__port_b_bit_number, 15		@ TIOB1 = peripheral a on port b
+	.set	trigger_delay__GCLOCK_CLEAR__port_b_bit_number, 4
+.endif
+
+.set	default_trace_1_log_base_2_of_Volts_per_division, 0
+.set	default_trace_2_log_base_2_of_Volts_per_division, 0
+
+.ifeq	function-oscilloscope
+	.set	need_SPI, 0
+	.set	need_TC0, 1
+	.set	need_TC1, 1
+	.set	need_TC2, 1
+	.set	need_TC3, 0
+	.set	need_TWI, 1
+.endif
+.ifeq	model-oscilloscoperev00
+	.set	need_TC3, 1
+.endif
+
+.set	analog_vdisplay_divided_input_number, 1
+.set	analog_vbus_divided_input_number, 2
+.set	analog_vbattery_divided_input_number, 3
+.set	analog_vout_current_input_number, 4
+.set	analog_2.5V_current_input_number, 5
+.set	analog_3.3V_current_input_number, 6
+.set	analog_vdisplay_current_input_number, 7
+.set	analog_ambient_light_input_number, 8
+
+.set	adc_one, 1<<(fixed_point_shift_by-adc_number_of_bits)
+.set	fixed_point_one, 1<<fixed_point_shift_by
+
+.set	onboard_oscilloscope_fixed_point_base_factor,  (  33 * adc_one) / 10 + 1
+
+.set	analog_fudge_factor_multiplicand, 11662
+.set	analog_fudge_factor_divisor, 10000
+.set	affm, analog_fudge_factor_multiplicand
+.set	affd, analog_fudge_factor_divisor
+
+@.set	analog_vdisplay_divided_multiplication_factor, (1800 * adc_one) / 100 @ voltage divider 330k+1.47M=1800k
+@.set	analog_vbus_divided_multiplication_factor,     ( 530 * adc_one) / 100 @ voltage divider 330k+200k=530k
+@.set	analog_vbattery_divided_multiplication_factor, ( 430 * adc_one) / 100 @ voltage divider 330k+100k=430k
+@.set	analog_ambient_light_multiplication_factor,    ( 330 * adc_one) / 100 @ no voltage divider
+
+.set	analog_vdisplay_divided_multiplication_factor, (1800 * affm * adc_one) / (100*affd) @ voltage divider 330k+1.47M=1800k
+.set	analog_vbus_divided_multiplication_factor,     ( 530 * affm * adc_one) / (100*affd) @ voltage divider 330k+200k=530k
+.set	analog_vbattery_divided_multiplication_factor, ( 430 * affm * adc_one) / (100*affd) @ voltage divider 330k+100k=430k
+.set	analog_ambient_light_multiplication_factor,    ( 330 * affm * adc_one) / (100*affd) @ no voltage divider
+
+@ V=IR
+@ R = 0.1 Ohm for 2.5, 3.5, vout
+@ R = 1   Ohm for vdisplay
+@ V_measured = 100 * V_actual
+@ I_measured = V_measured / R
+@ I_actual = V_actual / R = V_measured / (100*R)
+@ V_to_display = I_actual * ratio_of_voltage_to_current = V_actual * ratio_of_voltage_to_current / R = V_measured * ratio_of_voltage_to_current / (100*R)
+@ so ratios are ratio_of_voltage_to_current/(100R)
+@ or ratio_of_voltage_to_current / 10 for vout, 2.5, 3.5
+@ or ratio_of_voltage_to_current / 100 for vdisplay
+
+@.set	ratio_of_voltage_to_current, 100000	@ to display current waveforms on display, need unit conversion factor and scale factor
+@.set	ratio_of_voltage_to_current, 256	@ to display current waveforms on display, need unit conversion factor and scale factor
+.set	ratio_of_voltage_to_current, 330	@ to display current waveforms on display, need unit conversion factor and scale factor
+
+.set	analog_vout_current_multiplication_factor,     ( 1 * ratio_of_voltage_to_current * adc_one) / 10
+.set	analog_2.5V_current_multiplication_factor,     ( 1 * ratio_of_voltage_to_current * adc_one) / 10
+.set	analog_3.3V_current_multiplication_factor,     ( 1 * ratio_of_voltage_to_current * adc_one) / 10
+@.set	analog_vdisplay_current_multiplication_factor, ( 1 * ratio_of_voltage_to_current * adc_one) / 100
+.set	analog_vdisplay_current_multiplication_factor, ( 1 * ratio_of_voltage_to_current * adc_one) / 10
+
+.set	analog_multiplexer_i2c_address, 0b1001100
+.set	rtc_i2c_address, 0b0110000
+.set	quaddacs_i2c_address, 0b0011111
+.set	gpio1_i2c_address, 0b1000001
+.set	gpio2_i2c_address, 0b0100000
+.set	gpio3_i2c_address, 0b0100010
+
+.set	gpio1_polarity_select_io_number, 0	@ output
+.set	gpio1_trigger_clear_io_number, 1	@ output
+.set	gpio1_channel_a_multiplexer_a0_io_number, 2	@ output
+.set	gpio1_channel_a_multiplexer_a1_io_number, 3	@ output
+
+.set	gpio2_rot1_b_io_number, 0	@ input
+.set	gpio2_rot1_a_io_number, 1	@ input
+.set	gpio2_rot1_sw_io_number, 2	@ input
+.set	gpio2_usb_pullup_active_low_io_number, 3	@ output
+
+.set	gpio3_rot2_b_io_number, 0	@ input
+.set	gpio3_rot2_a_io_number, 1	@ input
+.set	gpio3_rot2_sw_io_number, 2	@ input
+.set	gpio3_cmpbias_short_io_number, 3	@ output
+.set	gpio3_channel_b_multiplexer_a0_io_number, 4	@ output
+.set	gpio3_channel_b_multiplexer_a1_io_number, 5	@ output
+.set	gpio3_shutdown_plus_5V_active_low_io_number, 6	@ output
+.set	gpio3_shutdown_minus_5V_active_low_io_number, 7	@ output
+
+.set	trigger_delay__trigger_b, TCLK0	@ an input
+.set	trigger_delay__trigger_a, TCLK1	@ an input
+.set	trigger_delay__RCO, TCLK2	@ an input
+
+.set	trigger_delay__nRUN, TIOA0
+.set	trigger_delay__RAMP, TIOA1
+.set	trigger_delay__GCLOCK_GATE, TIOB1
+
+@.set	CAL_output, PWM2
+.set	CAL_output, PCK2
+
+.set	button_1_port_a_bit, 02
+.set	button_2_port_a_bit, 03
+
+.set	vdisplay_enable_port_a_bit, 13
+
+.set	phase_of_trace_2_minimum, 0
+.set	phase_of_trace_2_maximum, 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table
+
+.set	phase_add_count, 200	@ number of milliseconds between which to change the phase of trace 2
+.set	phase_add_amount, 8
+
+@.set	autotrigger_maximum_delay, 800	@ in milliseconds
+.set	autotrigger_maximum_delay, 200	@ in milliseconds
+@.set	autotrigger_maximum_delay, 50	@ in milliseconds
+
+@ there's some stuff that's hardcoded to need TC0 for the first part:
+.set	timer_counter_channel_to_use_for_first_part_of_trigger_delay, TC0
+.set	timer_counter_channel_to_use_for_second_part_of_trigger_delay, TC1
+.set	timer_counter_channel_to_use_for_measuring_labrador3_frequency, TC2
+
+.set	number_of_screens_past_which_the_value_is_considered_an_overflow, 1
+
+.set	default_color_for_trace_1_normal, orange_2
+.set	default_color_for_trace_2_normal, teal
+.set	default_color_for_channel_a_normal, default_color_for_trace_2_normal
+.set	default_color_for_channel_b_normal, default_color_for_trace_1_normal
+.set	default_color_for_the_current_trace_clipped, red
+.set	default_color_for_horizontal_info, grey_2
+
+.set	traces_to_display__channel_a, 1<<0
+.set	traces_to_display__channel_b, 1<<1
+.set	traces_to_display__other_trace_3, 1<<2
+.set	traces_to_display__other_trace_4, 1<<3
+
+@ for log_base_2_of_number_of_samples_per_displayed_point remember:
+@ ram taken by onboard oscillscope buffer is proportional to 2^this
+@ practial limit so it'll fit in ram is no greater than 5
+@ time taken to sample data is also proportional to 2^this
+@ the timer/counter math might overflow if this is bigger than 10 or so:
+@ see function setup_timer_counter_channel_for_onboard_oscilloscope
+@ see function set_onboard_oscilloscope_sampling_period_from_horizontal_scale_setting
+@ the lower limit on time per division gets higher as this goes up
+
+.set	log_base_2_of_number_of_samples_per_displayed_point, 1
+.ifgt	log_base_2_of_number_of_samples_per_displayed_point-1
+	.error "lab3 can only take 260 samples and we need more than that for a >2 sample per point 121 pixel wide graph"
+.endif
+
+.set	RATIO_OF_RCO_TO_INTERNAL_LAB3_FREQUENCY, 512
+
+.set	log_base_2_of_number_of_labrador3_sampling_frequencies_to_accumulate, 3
+
+.ifc	asdf,s
+	.set	dac_c_minimum_allowable_value, 0xbe8
+	.set	dac_c_nominal_value, 0xde8
+	.set	dac_c_maximum_allowable_value, 0xde8
+	.set	dac_a_minimum_allowable_value, 0x1501
+	.set	dac_a_nominal_value, 0x17cd
+	.set	dac_a_maximum_allowable_value, 0x2d89
+.else
+	.set	dac_c_minimum_allowable_value, 0xbe8
+	.set	dac_c_nominal_value, 0xbe8
+	.set	dac_c_maximum_allowable_value, 0xde8
+	.set	dac_a_minimum_allowable_value, 0x1219
+	.set	dac_a_nominal_value, 0x1589
+	.set	dac_a_maximum_allowable_value, 0x2d89
+.endif
+
+.set	number_of_entries_in_dac_a_to_labrador3_frequency_table_delta, 256
+.set	dac_a_to_labrador3_frequency_table_delta, (dac_a_maximum_allowable_value-dac_a_minimum_allowable_value+1) / number_of_entries_in_dac_a_to_labrador3_frequency_table_delta
+
+@.set	lab3_offset, bit00<<(12-1) 
+@.set	lab3_offset, (0b10-0b01)<<10 - 0x1d
+@.set	lab3_offset__channel_a__multiplexer_1, 2048
+@.set	lab3_offset__channel_a__multiplexer_2, 2048-1365
+@.set	lab3_offset__channel_a__multiplexer_3, 1010
+@.set	lab3_offset__channel_a__multiplexer_3, 0
+@.set	lab3_offset__channel_a__multiplexer_4, 1024
+@.set	lab3_offset__channel_a__multiplexer_4, 2048
+@.set	lab3_offset__channel_a__multiplexer_4, 69+625
+
+@ 12 bit a/d converter, range is 2.5V-1V=1.5V, so each lsb is worth 1.5V/2^12
+@.set	lab3_fixed_point_gain, 100 * (15*fixed_point_one) / (10<<12) @ the 100 is a fudge
+@.set	lab3_fixed_point_gain__channel_a__multiplexer_1, (33 * lab3_fixed_point_gain__base) / 10
+.set	lab3_number_of_samples, 260
+
+.global	lab3_fixed_point_gain
+

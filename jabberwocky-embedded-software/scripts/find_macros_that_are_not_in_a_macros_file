@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+grep -r '\.macro' src/* | grep -v macros
+

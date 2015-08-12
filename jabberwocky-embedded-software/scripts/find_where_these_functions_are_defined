@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+declare dir="$(dirname $0)/../src"
+#echo "$dir"
+for each; do
+	grep -rn '^[^ ]*:' ${dir}/* | grep "${each}"
+done
+

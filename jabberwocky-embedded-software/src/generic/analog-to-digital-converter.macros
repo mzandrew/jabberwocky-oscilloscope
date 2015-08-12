@@ -1,0 +1,38 @@
+
+.macro	adc_collect_one_sample
+	@ this assumes there is exactly one channel enabled
+	@ destination is r0
+	push	r1-r2
+	ldr	r0, =ADC
+	ldr	r1, =bit00<<1	@ bit01 is adc start conversion (which is global for all enabled channels)
+	str	r1, [r0, #ADC_Control_Register_offset]
+	ldr	r2, =bit00<<16 @ DRDY = data ready
+1:	ldr	r1, [r0, #ADC_Status_Register_offset]
+	tst	r1, r2
+	bEQ	1b
+2:
+	ldr	r0, [r0, #ADC_Last_Converted_Data_Register_offset]
+	pop	r1-r2
+.endm
+
+.macro	adc_collect_multiple_samples	log_base_2_of_number_of_samples
+	@ this assumes there is exactly one channel enabled
+	@ destination is r0
+	push	r1-r5
+	ldr	r0, =ADC
+	ldr	r1, =bit00<<1  @ bit01 is adc start conversion (which is global for all enabled channels)
+	ldr	r2, =bit00<<16 @ DRDY = data ready
+	ldr	r3, =bit00<<\log_base_2_of_number_of_samples @ counter
+	ldr	r4, =0
+0:	str	r1, [r0, #ADC_Control_Register_offset] @ start conversion
+1:	ldr	r5, [r0, #ADC_Status_Register_offset]
+	tst	r5, r2
+	bEQ	1b
+2:	ldr	r5, [r0, #ADC_Last_Converted_Data_Register_offset]
+	add	r4, r4, r5
+	dec	r3
+	bNE	0b
+	mov	r0, r4, lsr #\log_base_2_of_number_of_samples
+	pop	r1-r5
+.endm
+

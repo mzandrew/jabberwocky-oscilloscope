@@ -1,0 +1,165 @@
+
+check_status_of_all_buttons_and_rotary_encoders:
+	@ this saves the "current" status as the "previous" status
+	@ this updates all button and rotary encoder statuses
+	@ this updates the debouncingness status
+	@ this adds the debounce timeout to the debounce counter if necessary
+	@ this updates the actively sampling status
+	@ and then checks to see whether they have changed and updates the corresponding deltas
+	push	r0-r12	@ bug/future
+	@ save "current" as "previous"
+	ldr	r0, =button_and_rotary_encoder_current_status
+	ldr	r0, [r0]
+	ldr	r1, =button_and_rotary_encoder_previous_status
+	str	r0, [r1]
+	ldr	r1, =button_and_rotary_encoder_raw_status
+	ldr	r1, [r1]
+	@ get new statuses:
+	ldr	r2, =button_and_rotary_encoder_active_sampling_status
+	ldr	r2, [r2]
+	ldr	r3, =rotary_encoder_maximum_index
+	ldr	r4, =bit00
+	@ r0 = running total of status
+	@ r1 = raw status
+	@ r2 = active sampling status
+	@ r3 = counter
+	@ r4 = bit00 
+check_status_of_all_buttons_and_rotary_encoders__button_next:
+	tst	r2, r4, lsl r3
+	bNE	check_status_of_all_buttons_and_rotary_encoders__button_done
+	tst	r1, r4, lsl r3
+	orrNE	r0, r0, r4, lsl r3
+	bicEQ	r0, r0, r4, lsl r3
+check_status_of_all_buttons_and_rotary_encoders__button_done:
+	dec	r3
+	bPL	check_status_of_all_buttons_and_rotary_encoders__button_next
+	@
+	ldr	r1, =button_and_rotary_encoder_current_status
+	str	r0, [r1]
+	ldr	r1, =button_and_rotary_encoder_previous_status
+	ldr	r1, [r1]
+	eor	r5, r0, r1
+	@ add debounce timeout to the debounce counters if there are deltas
+	ldr	r1, =bit00
+	@ r2 = actively sampling / debouncing
+	ldr	r6, =button_and_rotary_encoder__debounce_counters
+	@
+	ldr	r3, =number_of_milliseconds_to_debounce_rotary_encoder
+	ldr	r4, =rotary_encoder_maximum_index
+check_status_of_all_buttons_and_rotary_encoders__next_rotary_encoder:
+	tst	r5, r1, lsl r4
+	bEQ	check_status_of_all_buttons_and_rotary_encoders__another_next_rotary_encoder
+	strb	r3, [r6, r4]
+	orr	r2, r1, lsl r4
+check_status_of_all_buttons_and_rotary_encoders__another_next_rotary_encoder:
+	dec	r4
+	cmp	r4, #rotary_encoder_minimum_index
+	bHS	check_status_of_all_buttons_and_rotary_encoders__next_rotary_encoder
+	@
+	ldr	r3, =number_of_milliseconds_to_debounce_button
+	ldr	r4, =button_maximum_index
+check_status_of_all_buttons_and_rotary_encoders__next_button:
+	tst	r5, r1, lsl r4
+	bEQ	check_status_of_all_buttons_and_rotary_encoders__another_next_button
+	strb	r3, [r6, r4]
+	orr	r2, r1, lsl r4
+check_status_of_all_buttons_and_rotary_encoders__another_next_button:
+	dec	r4
+	bPL	check_status_of_all_buttons_and_rotary_encoders__next_button
+	ldr	r1, =button_and_rotary_encoder_active_sampling_status
+	str	r2, [r1]
+	ldr	r1, =button_and_rotary_encoder_debouncing_status
+	str	r2, [r1]
+	@ determine rotary encoder deltas
+	ldr	r1, =0b11
+	ldr	r2, =button_and_rotary_encoder_previous_status
+	ldr	r2, [r2]
+	ldr	r3, =button_and_rotary_encoder_current_status
+	ldr	r3, [r3]
+	ldr	r4, =rotary_encoder_maximum_index-1
+	@ indexing starts from 0, so 7 is a valid max_index
+	@ so shift should be by 6 to get both parts
+check_status_of_all_buttons_and_rotary_encoders__determine_rotary_encoder_deltas_next:
+	tst	r5, r1, lsl r4
+	bEQ	check_status_of_all_buttons_and_rotary_encoders__determine_rotary_encoder_deltas_done
+	bic	r5, r1, lsl r4
+	and	r6, r1, r2, lsr r4
+	cmp	r6, #0b11 @ check if it was *just* in-between detents
+	bNE check_status_of_all_buttons_and_rotary_encoders__determine_rotary_encoder_deltas_done
+	and	r7, r1, r3, lsr r4
+	eor	r6, r6, r7
+	ldr	r7, =0 @ sanity safeguard
+	@ this is where the type of rotary encoder is set (probably with a define somewhere else):
+	cmp	r6, #0b01
+	ldrEQ	r7, =1
+	cmp	r6, #0b10
+	ldrEQ	r7, =-1
+	and	r7, r7, r1 @ 0b11 is defined as -1 here after this instruction
+@		debug	r7
+	add	r5, r5, r7, lsl r4
+check_status_of_all_buttons_and_rotary_encoders__determine_rotary_encoder_deltas_done:
+	sub	r4, r4, #2
+	cmp	r4, #rotary_encoder_minimum_index
+	bHS	check_status_of_all_buttons_and_rotary_encoders__determine_rotary_encoder_deltas_next
+	ldr	r1, =button_and_rotary_encoder_delta
+	str	r5, [r1]
+@		mypool
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder_previous_status, address_of_new_value=button_and_rotary_encoder_current_status, x_position=14, y_position=30, type_of_value=word, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder_active_sampling_status, address_of_new_value=button_and_rotary_encoder_active_sampling_status, x_position=14, y_position=42, type_of_value=word, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder_debouncing_status, address_of_new_value=button_and_rotary_encoder_debouncing_status, x_position=14, y_position=54, type_of_value=word, color=green
+@		cmp	r5, #0
+@		bEQ	check_status_of_all_buttons_and_rotary_encoders_done
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder_delta, address_of_new_value=button_and_rotary_encoder_delta, x_position=14, y_position=66, type_of_value=word, color=green
+@check_status_of_all_buttons_and_rotary_encoders_done:
+	pop	r0-r12	@ bug/future
+	return
+
+.pool
+
+decrement_debounce_counters:
+	@ this decrements all button and rotary encoder debounce counters
+	push	r0-r12	@ bug/future
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+0, address_of_new_value=button_and_rotary_encoder__debounce_counters+0, x_position=33, y_position=18, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+1, address_of_new_value=button_and_rotary_encoder__debounce_counters+1, x_position=33, y_position=30, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+2, address_of_new_value=button_and_rotary_encoder__debounce_counters+2, x_position=33, y_position=42, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+3, address_of_new_value=button_and_rotary_encoder__debounce_counters+3, x_position=33, y_position=54, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+4, address_of_new_value=button_and_rotary_encoder__debounce_counters+4, x_position=33, y_position=66, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+5, address_of_new_value=button_and_rotary_encoder__debounce_counters+5, x_position=33, y_position=78, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+6, address_of_new_value=button_and_rotary_encoder__debounce_counters+6, x_position=33, y_position=90, type_of_value=byte, color=green
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder__debounce_counters+7, address_of_new_value=button_and_rotary_encoder__debounce_counters+7, x_position=33, y_position=102, type_of_value=byte, color=green
+	ldr	r0, =button_and_rotary_encoder_debouncing_status
+	ldr	r0, [r0]
+	ldr	r5, =button_and_rotary_encoder_active_sampling_status
+	ldr	r5, [r5]
+	ldr	r1, =bit00
+	ldr	r2, =rotary_encoder_maximum_index
+	ldr	r4, =button_and_rotary_encoder__debounce_counters
+	@ r3 = temporary
+	ldr	r6, =how_many_millisecond_periods_we_missed
+	ldr	r6, [r6]
+decrement_debounce_counters_next:
+	tst	r0, r1, lsl r2
+	bEQ	decrement_debounce_counters_another_next
+	ldrb	r3, [r4, r2]
+@	dec	r3
+	subS	r3, r3, r6
+	ldrMI	r3, =0
+	strb	r3, [r4, r2]
+@	strPLb	r3, [r4, r2]
+	@strHSb	r3, [r4, r2]
+	cmp	r3, #0
+	bNE	decrement_debounce_counters_another_next
+	bic	r0, r1, lsl r2
+	bic	r5, r1, lsl r2
+decrement_debounce_counters_another_next:
+	dec	r2
+	bPL	decrement_debounce_counters_next
+	ldr	r1, =button_and_rotary_encoder_debouncing_status
+	str	r0, [r1]
+	ldr	r4, =button_and_rotary_encoder_active_sampling_status
+	str	r5, [r4]
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+

@@ -1,0 +1,99 @@
+when it works:
+Open On-Chip Debugger 1.0 (2009-01-14-10:49) svn:1200
+
+
+BUGS? Read http://svn.berlios.de/svnroot/repos/openocd/trunk/BUGS
+
+
+$URL: http://svn.berlios.de/svnroot/repos/openocd/trunk/src/openocd.c $
+100 kHz
+Info:   JTAG tap: jabberwocky.cpu tap/device found: 0x3f0f0f0f (Manufacturer: 0x787, Part: 0xf0f0, Version: 0x3)
+Warning:no tcl port specified, using default port 6666
+target state: halted
+target halted in ARM state due to debug-request, current mode: User
+cpsr: 0x00000010 pc: 0x00004170
+auto erase enabled
+wrote 24672 byte from file work/jabberwocky.hex in 12.045020s (2.000308 kb/s)
+verified 24672 bytes in 0.590622s
+
+
+when it refuses to re-connect, this is what it displays:
+
+Open On-Chip Debugger 1.0 (2009-01-14-10:49) svn:1200
+
+
+BUGS? Read http://svn.berlios.de/svnroot/repos/openocd/trunk/BUGS
+
+
+$URL: http://svn.berlios.de/svnroot/repos/openocd/trunk/src/openocd.c $
+100 kHz
+Error:  JTAG communication failure, check connection, JTAG interface, target power etc.
+Error:  trying to validate configured JTAG chain anyway...
+Error:  Error validating JTAG scan chain, IR mismatch, scan returned 0x3f
+Error:  Could not validate JTAG chain, continuing anyway...
+Warning:TAP jabberwocky.cpu:
+Warning:value captured during scan didn't pass the requested check:
+Warning:captured: 0x0f check_value: 0x01 check_mask: 0x0f
+Warning:in_handler reported a failed check
+Warning:TAP jabberwocky.cpu:
+Warning:value captured during scan didn't pass the requested check:
+Warning:captured: 0x0f check_value: 0x01 check_mask: 0x0f
+Warning:in_handler reported a failed check
+Warning:no tcl port specified, using default port 6666
+Error:  Target not examined yet
+Runtime error, file "scripts/upload-to-flash.openocd-script", line 22:
+    
+In procedure 'script' called at file "command.c", line 448
+In procedure 'script' called at file "scripts/upload-to-flash.openocd-config", line 3
+
+when the jtag cable is disconnected (after having trouble re-connecting), it does this:
+Open On-Chip Debugger 1.0 (2009-01-14-10:49) svn:1200
+
+
+BUGS? Read http://svn.berlios.de/svnroot/repos/openocd/trunk/BUGS
+
+
+$URL: http://svn.berlios.de/svnroot/repos/openocd/trunk/src/openocd.c $
+100 kHz
+Error:  JTAG communication failure, check connection, JTAG interface, target power etc.
+Error:  trying to validate configured JTAG chain anyway...
+Error:  Error validating JTAG scan chain, IR mismatch, scan returned 0x3f
+Error:  Could not validate JTAG chain, continuing anyway...
+Warning:TAP jabberwocky.cpu:
+Warning:value captured during scan didn't pass the requested check:
+Warning:captured: 0x0f check_value: 0x01 check_mask: 0x0f
+Warning:in_handler reported a failed check
+Warning:TAP jabberwocky.cpu:
+Warning:value captured during scan didn't pass the requested check:
+Warning:captured: 0x0f check_value: 0x01 check_mask: 0x0f
+Warning:in_handler reported a failed check
+Warning:no tcl port specified, using default port 6666
+Error:  Target not examined yet
+Runtime error, file "scripts/upload-to-flash.openocd-script", line 22:
+    
+In procedure 'script' called at file "command.c", line 448
+In procedure 'script' called at file "scripts/upload-to-flash.openocd-config", line 3
+make: *** [program] Error 1
+
+and then one time it gave me this:
+Open On-Chip Debugger 1.0 (2009-01-14-10:49) svn:1200
+
+
+BUGS? Read http://svn.berlios.de/svnroot/repos/openocd/trunk/BUGS
+
+
+$URL: http://svn.berlios.de/svnroot/repos/openocd/trunk/src/openocd.c $
+100 kHz
+Error:  couldn't read the requested number of bytes from FT2232 device (78 < 81)
+Error:  couldn't read from FT2232
+Error:  number of discovered devices in JTAG chain (0) doesn't match (enabled) configuration (1), total taps: 1
+Error:  check the config file and ensure proper JTAG communication (connections, speed, ...)
+Error:  trying to validate configured JTAG chain anyway...
+Warning:no tcl port specified, using default port 6666
+target state: halted
+target halted in ARM state due to debug-request, current mode: User
+cpsr: 0x40000010 pc: 0x00004084
+auto erase enabled
+wrote 24672 byte from file work/jabberwocky.hex in 12.000973s (2.007650 kb/s)
+verified 24672 bytes in 0.591605s
+

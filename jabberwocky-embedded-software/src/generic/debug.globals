@@ -1,0 +1,99 @@
+.global	master_clock_frequency
+@.global flash_wait_states
+
+.global	dac_a_buffered_value
+.global	dac_c_buffered_value
+
+.global	average_labrador3_sampling_rate
+.global	accumulated_labrador3_sampling_rate__mantissa
+.global	accumulated_labrador3_sampling_rate__exponent
+
+.global	previous_fixed_point_battery_voltage
+.global	current_fixed_point_battery_voltage
+@.global analog_vbattery_divided_multiplication_factor
+
+.global	debug_stack_pointer
+.global	beginning_of_debug_stack
+.global	end_of_debug_stack
+
+@.global raw_adc_channel_data
+@.global beginning_of_buffer_for_onboard_oscilloscope_data
+
+.ifc	asdlga,kfe
+.global master_clock_frequency
+.global turn_off_led__asm
+.global turn_on_led__asm
+
+.global grey
+.global	background_color
+.global	font_color
+
+.global	inverse_of_zero_point_000000001
+.global	inverse_of_zero_point_000000500
+.global	inverse_of_zero_point_000500
+.global	inverse_of_zero_point_500000
+.global	one_twelvth_of_the_lookup_table
+
+.global width_of_trace_drawing_area
+.global height_of_trace_drawing_area
+.global trace_drawing_area_last_x
+.global trace_drawing_area_last_y
+.global	beginning_of_trace_1
+.global	beginning_of_trace_2
+.global	beginning_of_buffer_for_onboard_oscilloscope_data
+.global	color_for_the_current_trace_normal
+.global	color_for_the_current_trace_info
+.global	raw_adc_channel_data
+.global	color_for_trace_1_normal
+.global	color_for_trace_2_normal
+.global	color_for_trace_1_info
+.global	color_for_trace_2_info
+
+.global clock_face_mode
+.global old_x_position_of_end_of_second_hand
+.global old_y_position_of_end_of_second_hand
+.global current_x_position_of_end_of_second_hand
+.global current_y_position_of_end_of_second_hand
+.global	bcd_time_of_day
+.global	clock_bcd_hours
+.global	clock_bcd_minutes
+.global get_clock_block
+.global bcd_time_of_day
+.global time_of_day
+.global set_clock_block
+.global get_clock_block
+.global	clock_raw_bcd_hours_and_am_pm
+.global	clock_bcd_hours
+
+.global	current_display_brightness_level
+.global beginning_of_cosine_lookup_table
+.global beginning_of_sine_lookup_table
+.global end_of_cosine_lookup_table
+.global end_of_sine_lookup_table
+.global	one_over_n_fp_lookup_table
+.global	size_of_entire_lookup_table_in_words
+.global two_pi_fp
+
+
+.global dummy_1
+.global dummy_2
+.global dummy_3
+.global dummy_4
+
+.global master_clock_frequency
+.global main_clock_frequency
+.global pll_clock_frequency
+.global timer_frequency
+.global	number_of_TCX_clock_periods_in_one_millisecond
+.global	number_of_TC1_clock_periods_in_one_tenth_of_a_second
+.global exception_link_register
+.global exception_type
+
+.global rotary_encoder_a_previous_position
+.global rotary_encoder_a_current_position
+.global rotary_encoder_a_value
+.global	rotary_encoder_a_signed_delta_stable
+.global rotary_encoder_a_signed_delta_stable_previous_increase_or_decrease
+.global clock_tenths_of_seconds
+.endif
+

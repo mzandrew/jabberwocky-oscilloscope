@@ -1,0 +1,107 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+trigger_onboard_oscilloscope_trigger_clock:
+	push	r0-r2
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r2
+	return
+
+autotrigger_onboard_oscilloscope:
+	call	setup_buffer_for_onboard_oscilloscope_DMA
+	return
+
+wait_for_onboard_oscilloscope_to_finish_aquiring_data:
+	push	r0-r1
+	ldr	r0, =ADC
+wait_for_onboard_oscilloscope_to_finish_aquiring_data_next:
+	ldr	r1, [r0, #ADC_Status_Register_offset]
+@	tst	r1, #bit00<<19	@ RXBUFF receive buffer full
+	tst	r1, #bit00<<18	@ ENDRX receive counter register has become 0 since last write to the receive counter register or the next receive counter register
+	bEQ	wait_for_onboard_oscilloscope_to_finish_aquiring_data_next
+	pop	r0-r1
+	return
+
+check_whether_onboard_oscilloscope_has_finished_aquiring_data:
+	push	r0-r1
+	ldr	r0, =ADC
+	ldr	r1, [r0, #ADC_Status_Register_offset]
+@	tst	r1, #bit00<<19	@ RXBUFF receive buffer full
+	tst	r1, #bit00<<18	@ ENDRX receive counter register has become 0 since last write to the receive counter register or the next receive counter register
+		ldr	r0, =currently_retrieving_data_so_do_not_autotrigger
+		ldr	r1, =0
+		strNEb	r1, [r0]
+	pop	r0-r1
+	return
+
+@ ============================================================================
+
+old_copy_onboard_oscilloscope_buffer_to_trace_buffers:
+	push	r0-r5
+	ldr	r1, =beginning_of_buffer_for_onboard_oscilloscope_data
+	ldr	r2, =beginning_of_trace_1
+	ldr	r4, =number_of_datapoints_in_a_displayed_trace
+	ldr	r5, =onboard_oscilloscope_fixed_point_multiplication_factor
+	ldr	r5, [r5]
+old_copy_onboard_oscilloscope_buffer_to_trace_buffers_next:
+	@ this should be changed if a second channel is ever enabled, since the data is interleaved
+	.ifeq	adc_number_of_bits-8
+		ldrb	r0, [r1], #1
+	.else
+		ldrh	r0, [r1], #2
+	.endif
+	mul	r0, r5, r0
+	str	r0, [r2], #4
+	dec	r4
+	bNE	old_copy_onboard_oscilloscope_buffer_to_trace_buffers_next
+	ldr	r3, =beginning_of_trace_2
+	ldr	r4, =number_of_datapoints_in_a_displayed_trace
+old_copy_onboard_oscilloscope_buffer_to_trace_buffers_next_next:
+	@ this should be changed if a second channel is ever enabled, since the data is interleaved
+	.ifeq	adc_number_of_bits-8
+		ldrb	r0, [r1], #1
+	.else
+		ldrh	r0, [r1], #2
+	.endif
+	mul	r0, r5, r0
+	str	r0, [r3], #4
+	dec	r4
+	bNE	old_copy_onboard_oscilloscope_buffer_to_trace_buffers_next_next
+	pop	r0-r5
+	return
+
+copy_onboard_oscilloscope_buffer_to_trace_1_buffer:
+	push	r0-r5
+	ldr	r1, =beginning_of_buffer_for_onboard_oscilloscope_data
+	ldr	r2, =beginning_of_trace_1
+	ldr	r4, =number_of_datapoints_in_a_displayed_trace
+	ldr	r7, =onboard_oscilloscope_fixed_point_multiplication_factor
+	ldr	r7, [r7]
+copy_onboard_oscilloscope_buffer_to_trace_1_buffer_next:
+	ldr	r5, =bit00<<log_base_2_of_number_of_samples_per_displayed_point
+	ldr	r6, =0
+copy_onboard_oscilloscope_buffer_to_trace_1_buffer_next_next:
+	.ifeq	adc_number_of_bits-8
+		@ this should be changed if a second channel is ever enabled, since the data is interleaved
+		ldrb	r0, [r1], #1
+	.else
+		ldrh	r0, [r1], #2
+	.endif
+	add	r6, r6, r0
+	dec	r5
+	bNE	copy_onboard_oscilloscope_buffer_to_trace_1_buffer_next_next
+	mul	r0, r7, r6
+	mov	r0, r0, lsr #log_base_2_of_number_of_samples_per_displayed_point
+	str	r0, [r2], #4
+	dec	r4
+	bNE	copy_onboard_oscilloscope_buffer_to_trace_1_buffer_next
+	pop	r0-r5
+	return
+

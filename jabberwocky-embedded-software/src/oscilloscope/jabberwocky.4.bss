@@ -1,0 +1,136 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+.align 2
+
+.global button_and_rotary_encoder_current_status
+button_and_rotary_encoder_raw_status:             .word 0 @ quiescent state = 0 (all buttons up)
+button_and_rotary_encoder_previous_status:        .word 0 @ quiescent state = 0 (all buttons up)
+button_and_rotary_encoder_current_status:         .word 0 @ quiescent state = 0 (all buttons up)
+button_and_rotary_encoder_delta:                  .word 0 @ quiescent state = 0 (no changes)
+button_and_rotary_encoder_debouncing_status:      .word 0 @ quiescent state = 0 (not debouncing any)
+button_and_rotary_encoder_active_sampling_status: .word	0 @ quiescent state = 0 (actively sampling all)
+
+beginning_of_data_for_the_current_trace:	.word 0
+@vertical_offset_in_Volts_for_the_current_trace:	.word 0
+vertical_offset_in_fixed_point_divisions_for_the_current_trace:	.word 0
+vertical_offset_in_pixels_for_the_current_trace:	.word 0	@ this is allowed to be WAY off the screen, so not just a byte
+old_vertical_offset_in_pixels_for_trace_1:	.word 0	@ this is allowed to be WAY off the screen, so not just a byte
+old_vertical_offset_in_pixels_for_trace_2:	.word 0	@ this is allowed to be WAY off the screen, so not just a byte
+log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace:	.word 0
+vertical_scale_for_the_current_trace:	.word 0
+
+color_for_the_current_trace_normal:	.word 0
+color_for_the_current_trace_info:	.word 0
+
+fixed_point_Volts_per_division_for_the_current_trace:	.word 0
+fixed_point_Volts_per_division_for_trace_1:	.word 0
+@old_fixed_point_Volts_per_division_for_trace_1:	.word 0
+fixed_point_Volts_per_division_for_trace_2:	.word 0
+@old_fixed_point_Volts_per_division_for_trace_2:	.word 0
+@trace_fixed_point_Volts_per_division:	.word 0
+
+double_precision_fixed_point_seconds_per_division:	.word 0
+
+phase_add_counter:	.word 0	@ number of milliseconds between which to change the phase of trace 2 and redraw the screen
+
+period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks:	.word 0
+
+fixed_point_divisions_per_Volt_for_the_current_trace:	.word 0 @ this is for 32V/div to 1V/div and is a fixed-point value
+inverse_of_the_vertical_scale_in_divisions_per_Volt_for_the_current_trace:	.word 0 @ this is for 500mV/div to 100uV/div and is an integer
+@inverse_of_the_vertical_scale_in_divisions_per_Volt_for_trace_1:	.word 0
+@inverse_of_the_vertical_scale_in_divisions_per_Volt_for_trace_2:	.word 0
+
+number_of_nanoseconds_in_a_trigger_delay_counter_period:	.word 0
+number_of_trigger_delay_counter_periods_in_a_second:	.word 0
+
+trigger_delay_in_timer_counter_clocks:	.word 0
+desired_trigger_delay_in_nanoseconds:	.word 0
+trigger_delay_first_part_TC_Channel_Mode_Register_saved_value_sans_trigger_channel_selection_and_trigger_edge:	.word 0
+
+fixed_point_temporary_value:	.word 0
+fixed_point_temporary_value_BCD:	.word 0
+
+current_fixed_point_bus_voltage:	.word 0
+current_fixed_point_bus_voltage__BCD:	.word 0
+
+current_fixed_point_vout_current:	.word 0
+current_fixed_point_vout_current__BCD:	.word 0
+
+current_fixed_point_3.3V_current:	.word 0
+current_fixed_point_3.3V_current__BCD:	.word 0
+
+current_fixed_point_2.5V_current:	.word 0
+current_fixed_point_2.5V_current__BCD:	.word 0
+
+current_fixed_point_display_current:	.word 0
+current_fixed_point_display_current__BCD:	.word 0
+
+.global	current_fixed_point_vout_current__BCD
+.global	current_fixed_point_3.3V_current__BCD
+.global	current_fixed_point_2.5V_current__BCD
+.global	current_fixed_point_display_current__BCD
+
+current_fixed_point_display_voltage:	.word 0
+current_fixed_point_display_voltage__BCD:	.word 0
+
+@previous_fixed_point_battery_voltage:	.word 0
+current_fixed_point_battery_voltage:	.word 0
+@previous_fixed_point_battery_voltage__BCD:	.word 0
+current_fixed_point_battery_voltage__BCD:	.word 0
+
+once_per_second_timer_counter__derived_from_millisecond_timer:	.word 0
+ten_times_per_second_timer_counter__derived_from_millisecond_timer:	.word 0
+one_hundred_times_per_second_timer_counter__derived_from_millisecond_timer:	.word 0
+two_hundred_times_per_second_timer_counter__derived_from_millisecond_timer:	.word 0
+n_times_per_second_timer_counter__derived_from_millisecond_timer:	.word 0
+
+analog_multiplication_factor:	.word 0
+
+old_sampling_frequency:	.word 0
+old_sampling_frequency_BCD:	.word 0
+sampling_frequency_BCD:	.word 0
+sampling_frequency:	.word 0
+
+frequency_of_LAB3:	.word 0
+number_of_RCO_clock_ticks_in_last_timing_period:	.word 0
+frequency_of_RCO:	.word 0
+
+.global	sampling_frequency
+.global	frequency_of_LAB3
+
+accumulated_labrador3_sampling_rate__mantissa:	.word 0
+accumulated_labrador3_sampling_rate__exponent:	.word 0
+@accumulated_labrador3_sampling_rate__most_significant_word:	.word 0
+@accumulated_labrador3_sampling_rate__least_significant_word:	.word 0
+average_labrador3_sampling_rate:	.word 0
+
+dac_a_to_labrador3_frequency_table_offset:	.word 0
+.global	dac_a_lower_bound
+.global	dac_a_upper_bound
+dac_a_lower_bound:	.word 0
+dac_a_upper_bound:	.word 0
+
+number_of_milliseconds_in_a_RCO_timing_period:	.word 0
+number_of_RCO_timing_periods_in_one_second:	.word	0
+
+beginning_of_lab3_buffer_for_channel_a:	.space 4*260
+beginning_of_lab3_buffer_for_channel_b:	.space 4*260
+
+average_value_of_lab3_data:	.word 0
+
+lab3_offset__channel_a:	.word 0
+lab3_offset__channel_b:	.word 0
+
+@ this is the voltage out from the dac:
+actual_trigger_voltage__mantissa:	.word 0
+actual_trigger_voltage__exponent:	.word 0
+@ this is scaled and offset to correspond to what's being displayed in the trace area:
+trigger_voltage__mantissa:	.word 0
+trigger_voltage__exponent:	.word 0
+
+trigger_level:	.word 0
+trigger_level_line_color:	.word 0
+
+old_trigger_level_for_trace_1:	.word 0
+
+trigger_level_dac_steps_per_onscreen_pixel:	.word 0
+

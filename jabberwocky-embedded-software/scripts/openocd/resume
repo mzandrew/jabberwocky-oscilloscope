@@ -1,0 +1,5 @@
+
+mww 0xfffffc30 0x00000003
+sleep 200
+resume
+

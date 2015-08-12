@@ -1,0 +1,195 @@
+
+display_vout_current:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_vout_current__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_milliAmps_to_string_and_display_it	color=orange, position_x=75, position_y=18
+	pop	r0-r12 @ bug/future
+	return
+
+display_2.5V_current:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_2.5V_current__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_milliAmps_to_string_and_display_it	color=orange, position_x=75, position_y=54
+	pop	r0-r12 @ bug/future
+	return
+
+display_3.3V_current:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_3.3V_current__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_milliAmps_to_string_and_display_it	color=orange, position_x=75, position_y=30
+	pop	r0-r12 @ bug/future
+	return
+
+display_display_current:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_display_current__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_milliAmps_to_string_and_display_it	color=orange, position_x=75, position_y=42
+	pop	r0-r12 @ bug/future
+	return
+
+display_bus_voltage:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_bus_voltage__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_deciVolts_to_string_and_display_it	color=orange, position_x=33, position_y=18
+	pop	r0-r12 @ bug/future
+	return
+
+display_display_voltage:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_display_voltage__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_deciVolts_to_string_and_display_it	color=orange, position_x=33, position_y=30
+	pop	r0-r12 @ bug/future
+	return
+
+display_battery_voltage:
+	push	r0-r12 @ bug/future
+	ldr	r0, =current_fixed_point_battery_voltage__BCD
+	ldr	r0, [r0]
+	convert_BCD_quantity_of_deciVolts_to_string_and_display_it	color=red, position_x=position_of_center_of_first_character_in_battery_voltage_x, position_y=position_of_center_of_first_character_in_battery_voltage_y
+	pop	r0-r12 @ bug/future
+	return
+
+@ ============================================================================
+
+get_2.5V_current__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=2.5V_current
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_2.5V_current
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_2.5V_current__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_3.3V_current__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=3.3V_current
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_3.3V_current
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_3.3V_current__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_vout_current__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=vout_current
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_vout_current
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_vout_current__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_vbus_voltage__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=vbus_divided
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_bus_voltage
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_bus_voltage__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_display_current__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=vdisplay_current
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_display_current
+	str	r2, [r1]
+@		debug_if_changed	r2
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_display_current__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_display_voltage__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=vdisplay_divided
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_display_voltage
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_display_voltage__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+get_battery_voltage__carefully:
+	@ carefully means only inside a save_state_of_onboard_oscilloscope / restore_state_of_onboard_oscilloscope
+	push	r0-r12 @ bug/future
+	select_input_for_i2c_analog_multiplexer_macro	input=vbattery_divided
+	call	get_voltage
+	ldr	r2, =fixed_point_temporary_value
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_battery_voltage
+	str	r2, [r1]
+	ldr	r2, =fixed_point_temporary_value_BCD
+	ldr	r2, [r2]
+	ldr	r1, =current_fixed_point_battery_voltage__BCD
+	str	r2, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+@ ============================================================================
+
+get_voltage:
+	push	r0-r12 @ bug/future
+	adc_collect_multiple_samples	log_base_2_of_number_of_samples=4
+@	adc_collect_one_sample
+	ldr	r1, =10
+	mul	r0, r1, r0 @ multiply by 10 so we end up with 3.1V => "31"
+	ldr	r1, =onboard_oscilloscope_fixed_point_multiplication_factor
+	ldr	r1, [r1]
+	mul	r0, r1, r0 @ multiply by 4.3 to compensate for the voltage divider (255=4.3V)
+	mov	r0, r0, lsr #fixed_point_shift_by	@ divide by the fixed point quantity to get an integer
+@	add	r0, r0, #2 @ add 4*0.5 to get rounding to occur at 0.5 instead of 0.0
+	ldr	r2, =fixed_point_temporary_value
+	str	r0, [r2]
+	call	convert_hexadecimal_to_BCD
+	ldr	r2, =fixed_point_temporary_value_BCD
+	str	r0, [r2]
+	pop	r0-r12 @ bug/future
+	return
+
+@ ============================================================================
+

@@ -1,0 +1,179 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+initialize_arm7_for_other_stuff:
+	push	r0-r12	@ bug/future
+@	call	show_lookup_table
+@	delay_imm	50
+		ldr	r0, =exception_link_register
+		ldr	r1, =0x77777777
+		str	r1, [r0]
+@		debug	r15
+@		call	toggle_general_purpose_output_a
+@	call	deactivate_cmpbias
+	call	activate_cmpbias
+@	call	turn_off_2.5V_supply
+	call	turn_on_2.5V_supply
+@	call	turn_off_Vdisplay
+	call	turn_on_Vdisplay
+@	call	turn_off_plus_and_minus_5V_supplies
+	call	turn_on_plus_and_minus_5V_supplies
+	call	turn_on_quaddacs_internal_reference
+@	call	select_channel_a_multiplexer_1
+@	call	select_channel_a_multiplexer_2
+@	call	select_channel_a_multiplexer_3
+	call	select_channel_a_multiplexer_4
+	call	enable_programmable_clock_output_for_CAL
+	.ifne	i2c_controller_available
+@		select_input_for_i2c_analog_multiplexer_macro	input=none
+@		call	select_no_input_for_i2c_analog_multiplexer
+		select_input_for_i2c_analog_multiplexer_macro	input=ambient_light
+@		select_input_for_i2c_analog_multiplexer_macro	input=vbus_divided
+@		select_input_for_i2c_analog_multiplexer_macro	input=vbattery_divided
+@		select_input_for_i2c_analog_multiplexer_macro	input=vdisplay_divided
+@		select_input_for_i2c_analog_multiplexer_macro	input=vdisplay_current
+@		select_input_for_i2c_analog_multiplexer_macro	input=3.3V_current
+@		select_input_for_i2c_analog_multiplexer_macro	input=2.5V_current
+@		select_input_for_i2c_analog_multiplexer_macro	input=vout_current
+	.endif
+@	call	show_master_clock_frequency
+@	call	test_multiply_routines
+	call	update_dac_a_from_buffered_value
+@	call	update_dac_b_from_buffered_value
+	call	update_dac_c_from_buffered_value
+	call	update_dac_d_from_buffered_value
+	call	setup_for_dac_a_to_labrador3_frequency_table
+@@	call	fill_dac_a_to_labrador3_frequency_table
+@	call	test_floating_point_add
+	ldr	r0, =trigger_level_for_trace_1
+	ldr	r0, [r0]
+	ldr	r1, =dac_b_buffered_value
+	str	r0, [r1]
+	call	predicate_change_to_trigger_level_for_trace_1
+	pop	r0-r12 @ bug/future
+	return
+
+toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed:
+	push	r0-r1
+	@ check the processor speed:
+	ldr	r0, =PIOA
+	ldr	r1, =1<<general_purpose_output_a
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	pop	r0-r1
+	return
+
+.ifne	shutdown_controller_available
+setup_shutdown_controller_wakeup:
+	push	r0-r1
+	ldr	r0, =SHDW
+	ldr	r1, =0
+	str	r1, [r0, #SHDW_Mode_Register_offset]
+	pop	r0-r1
+	return
+.endif
+
+initialize_arm7_for_oled_display_and_initialize_oled_display:
+	.if	mode & use_oled_display
+		push	r0-r12	@ bug/future
+		setup_data_bus
+		setup_display_control_lines
+		call	pulse_display_reset_line
+		setup_display
+@			call	display_a_friendly_message
+@			call	display_a_paragraph
+		pop	r0-r12	@ bug/future
+	.else
+		.warning	"NOT using OLED display"
+	.endif
+	return
+
+initialize_arm7_for_rotary_encoders:
+	push	r0-r12	@ bug/future
+	setup_rotary_encoder_a_input_lines
+	ldr	r0, =rotary_encoder_a_value
+@ bug/future:  save last state & restore upon power-up?
+@	ldrb	r1, [r0]
+	ldr	r1, =5
+	keep_it_between_signed	min=0, it=r1, max=123
+	strb	r1, [r0]
+@		get_rotary_encoder_a_current_position	destination_register=r0
+@		ldr	r1, =rotary_encoder_a_previous_position
+@		strb	r0, [r1]
+@		ldr	r1, =rotary_encoder_a_current_position
+@		strb	r0, [r1]
+	call	get_raw_status_of_all_buttons_and_rotary_encoders
+	call	check_status_of_all_buttons_and_rotary_encoders
+	ldr	r0, =button_and_rotary_encoder_current_status
+	ldr	r0, [r0]
+	ldr	r1, =button_and_rotary_encoder_previous_status
+	str	r0, [r1]
+	pop	r0-r12	@ bug/future
+	return
+
+@	@	@	@	@	@	@	@	@
+
+get_master_clock_frequency:
+	push	r0-r12 @ bug/future
+	.ifeq	use_rc_clock_only
+		.if	model-oscilloscoperev00
+			ldr	r1, =PMC
+			ldr	r0, =bit00
+			mov	r0, r0, lsl #16
+0:			ldr	r2, [r1, #PMC_Clock_Generator_Main_Clock_Frequency_Register_offset]
+			tst	r2, r0
+			bEQ	0b
+			ldr	r0, =0xffff
+			and	r0, r0, r2
+@			ldr	r1, =master_clock_frequency
+@			str	r0, [r1]
+@			mov	r0, r2, lsr #8
+@			ldr	r1, =PIOA
+@			str	r2, [r1, #Set_Output_Data_Register_offset]
+			ldr	r1, =rc_clock_frequency	@ set this closer to the actual clock frequency of the rc slow clock
+			mul	r2, r0, r1
+			mov	r2, r2, lsr #4
+		.else
+			ldr	r2, =oscilloscoperev00_clock_frequency
+		.endif
+		ldr	r0, =main_clock_frequency
+		str	r2, [r0]
+		ldr	r0, =PMC
+		ldr	r0, [r0, #PMC_Master_Clock_Register_offset]
+		mov	r1, r0
+		ldr	r2, =0b11	@ this selects the css field
+		and	r0, r0, r2
+		cmp	r0, #0b01
+@ if this test is not true, the master clock is not = the main clock
+		mov	r1, r1, lsr #2
+		ldr	r2, =0b111	@ this selects the pres field
+		and	r1, r1, r2
+@		ldr	r0, #bit00
+@		mov	r0, r0, lsl r1
+		ldr	r0, =main_clock_frequency
+		ldr	r0, [r0]
+		.if	use_pll
+			ldr	r2, =pll_multiplier
+			inc	r2
+			mul	r0, r2, r0	@ this can overrun 32 bits; if it does, put the divide statement above this one
+			mov	r0, r0, lsr #log_base_2_of_pll_divisor
+			ldr	r2, =pll_clock_frequency
+			str	r0, [r2]
+		.endif
+		mov	r0, r0, lsr r1	@ take main_clock_frequency (or pll_clock_frequency) and divide it by 2^pres to calculate master_clock_frequency
+@		mov	r0, r1
+		ldr	r1, =master_clock_frequency
+		str	r0, [r1]
+	.else
+		ldr	r0, =30000
+		ldr	r1, =master_clock_frequency
+		str	r0, [r1]
+	.endif
+	pop	r0-r12 @ bug/future
+	return
+

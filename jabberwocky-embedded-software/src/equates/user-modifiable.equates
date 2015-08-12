@@ -1,0 +1,62 @@
+@ ============================================================================
+
+@.set	model, prototypeclock
+@.set	model, clockrev00
+@.set	model, prototypeoscilloscope
+.set	model, oscilloscoperev00
+
+.set	debug, 1
+@.set	old_mode, test_trigger_delay
+.set	old_mode, normal
+@.set	old_mode, test_frequency_measurement	@ this is not yet done
+@.set	old_mode, test_twi
+
+@.set	mode, use_oled_display | use_TC0_for_AtoD_timing | use_onboard_oscilloscope_functionality | use_TC2_for_millisecond_delays
+@.set	mode, use_TC0_for_AtoD_timing | use_TC2_for_millisecond_delays
+@.set	mode, use_oled_display | use_TC0_and_TC1_for_trigger_delay | use_TC2_for_millisecond_delays
+.set	mode, use_oled_display | use_TC0_and_TC1_for_trigger_delay | use_TC2_for_RCO_measurement
+@.set	mode, use_oled_display | use_TC2_for_millisecond_delays
+
+@ ============================================================================
+
+@ set either PLL or RC, but not both
+@ if neither is 1, then the main oscillator will be used
+.set	use_pll, 1
+.set	use_rc_clock_only, 0
+
+@ the following two are mutually exclusive
+@ use_ext_osc below is NOT a synonym for "neither of the above two"
+.set	use_crystal, 0
+.set	use_external_oscillator, 1
+
+@ be careful here, or it'll crank the processor clock past f_max
+@ (see top of page 217 in pdf and source code for setup_master_clock and _again):
+@ 2009-02-04 *85  /2^6 33.2MHz works
+@ 2009-02-04 *90  /2^6 35.1MHz almost works (functions, but keeps resetting itself)
+@ 2009-02-04 *100 /2^6 39.1MHz does not work (most of the grid is drawn and a trace appears but nothing updates)
+@ 2009-02-04 *130 /2^6 50.7MHz does not work (a few garbled characters at bottom)
+@ 2009-02-04 *153 /2^6 59.8MHz does not work (nothing at all on display)
+@ all that was because of improperly set flash wait states
+@ 2009-02-04 *153 /2^6 59.8MHz works
+@ 2009-02-04 *160 /2^6 62.5MHz works
+@ 2009-02-04 *165 /2^6 64.4MHz works
+@ 2009-02-04 *175 /2^6 68.4MHz does not work (nothing at all on display)
+@ 2009-02-04 *190 /2^6 74.2MHz does not work (nothing at all on display)
+@ there's really no need to drive this past 30MHz until the program is run from ram...
+@ except maybe for some usb or counter/timer timing
+@.set	pll_multiplier, 100	@ 0-2047 => multiply by (pll_multipliter+1)
+.set	pll_multiplier, 152	@ 0-2047 => multiply by (pll_multipliter+1)
+.set	log_base_2_of_pll_divisor, 6	@ 2^(this) = divisor, range 0-7
+@ pll frequency = pll_multiplier * main oscillator frequency / 2^(log_base_2_of_pll_divisor)
+
+@ ============================================================================
+
+.set	fixed_point_shift_by, 15
+.set	log_base_2_of_four_fifths_of_the_size_of_the_lookup_table, 8
+.set	maximum_n, 24
+@.set	maximum_n, 20
+
+.set	double_precision_fixed_point_shift_by, 30
+
+@ ============================================================================
+

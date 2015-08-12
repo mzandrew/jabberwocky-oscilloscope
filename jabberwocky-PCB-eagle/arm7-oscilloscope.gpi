@@ -1,0 +1,58 @@
+Photoplotter Info File: /home/mza/documents/ee/eagle/arm7-oscilloscope/arm7-oscilloscope.gpi
+
+ Date              :  4/25/2008 08:43:21 
+ Plotfile          : /home/mza/documents/ee/eagle/arm7-oscilloscope/arm7-oscilloscope.GBS
+ Apertures         : generated: 
+ Device            : Gerber photoplotter with RS-274-X aperture generation
+
+Parameter settings:
+
+ Emulate Apertures : no
+ Emulate Thermal   : no
+ Emulate Annulus   : no
+ Tolerance Draw  + :  0.00 %
+ Tolerance Draw  - :  0.00 %
+ Tolerance Flash + :  0.00 %
+ Tolerance Flash - :  0.00 %
+ Rotate            : no
+ Mirror            : no
+ Optimize          : yes
+ Auto fit          : yes
+ OffsetX           : 0inch
+ OffsetY           : 0inch
+
+Plotfile Info:
+
+ Coordinate Format : 2.4
+ Coordinate Units  : Inch
+ Data Mode         : Absolute
+ Zero Suppression  : None
+ End Of Block      : *
+
+Apertures used:
+
+ Code     Shape     Size                  used
+
+ D10      round     0.0966inch               2
+ D11      oval      0.0992inch x 0.0536inch     5
+ D12      draw      0.0024inch              91
+ D13      square    0.0595inch               4
+ D14      round     0.0595inch               9
+ D15      draw      0.0025inch              11
+ D16      draw      0.0026inch               6
+ D17      draw      0.0023inch               4
+ D18      draw      0.0023inch               2
+ D19      draw      0.0022inch              10
+ D20      draw      0.0036inch              30
+ D21      rectangle 0.0689inch x 0.0768inch     1
+ D22      rectangle 0.0709inch x 0.0768inch     1
+ D23      draw      0.0033inch              12
+ D24      draw      0.0029inch              12
+ D25      draw      0.0029inch              14
+ D26      draw      0.0021inch               4
+ D27      round     0.1316inch               8
+ D28      round     0.0795inch               2
+ D29      round     0.1031inch               4
+ D30      round     0.0759inch               2
+ D31      round     0.0390inch             356
+

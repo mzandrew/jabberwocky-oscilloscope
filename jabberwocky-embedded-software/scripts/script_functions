@@ -1,0 +1,26 @@
+declare each
+
+function prepend_filename {
+	sed -e "s,^,${each}:,"
+}
+
+function filter_comments {
+	sed -e "s,@.*,,"
+}
+
+function filter_whitespace {
+#	sed -e "s,[\t ]\+, ,g"
+	#tr -s '\t ' | sed -e "s, $,," -e "s,\t$,,"
+	tr '\t' ' ' | tr -s ' ' | sed -e "s, $,,"
+}
+
+function filter_blank_lines {
+#	sed -e "s,^ $,,g" -e "s,^$,,g"
+	tr -s '\n'
+#	sed -e "s,$^,,m"
+}
+
+function filter_whitespace_lines {
+	sed -e "s,^[\t ]*$,," | filter_blank_lines
+}
+

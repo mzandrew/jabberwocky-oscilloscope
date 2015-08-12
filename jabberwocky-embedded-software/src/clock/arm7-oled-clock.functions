@@ -1,0 +1,192 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+determine_position_of_hour_hand:
+	ldr	r0, =hand_length
+	ldr	r1, =hour_hand_length
+	ldrb	r1, [r1]
+@		debug	r1
+@		debug	r1
+@		debug	r1
+@		debug	r1
+	strb	r1, [r0]
+	ldr	r1, =60
+	ldr	r2, =clock_hours
+	ldrb	r2, [r2]
+@		debug	r2
+	cmp	r2, #12
+	movEQ	r2, #0
+	ldr	r3, =clock_minutes
+	ldrb	r3, [r3]
+	mla	r4, r1, r2, r3
+@	mul	r4, r1, r2
+	ldr	r0, =clock_variable
+	str	r4, [r0]
+@		debug	r4
+@		push	r12
+@		ldr	r12, =dummy_1
+@		str	r4, [r12]
+@		pop	r12
+@	str	r2, [r0]
+	ldr	r0, =ratio_fp
+	ldr	r1, =hours_ratio_fp
+	str	r1, [r0]
+@		debug	r1
+	call	determine_position_of_hand
+	ldr	r0, =current_x_position_of_end_of_hand
+	ldr	r1, =current_x_position_of_end_of_hour_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r0, =current_y_position_of_end_of_hand
+	ldr	r1, =current_y_position_of_end_of_hour_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	return
+
+determine_position_of_minute_hand:
+	ldr	r0, =hand_length
+	ldr	r1, =minute_hand_length
+	ldrb	r1, [r1]
+	strb	r1, [r0]
+	ldr	r1, =60
+	ldr	r2, =clock_minutes
+	ldrb	r2, [r2]
+	ldr	r3, =clock_seconds
+	ldrb	r3, [r3]
+	mla	r4, r1, r2, r3
+	ldr	r0, =clock_variable
+	str	r4, [r0]
+@		str	r2, [r0]
+	ldr	r0, =ratio_fp
+	ldr	r1, =minutes_ratio_fp
+	str	r1, [r0]
+	call	determine_position_of_hand
+	ldr	r0, =current_x_position_of_end_of_hand
+	ldr	r1, =current_x_position_of_end_of_minute_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r0, =current_y_position_of_end_of_hand
+	ldr	r1, =current_y_position_of_end_of_minute_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	return
+
+determine_position_of_second_hand:
+	ldr	r0, =hand_length
+	ldr	r1, =second_hand_length
+	ldrb	r1, [r1]
+	strb	r1, [r0]
+	ldr	r0, =10
+	ldr	r1, =clock_seconds
+	ldrb	r1, [r1]
+	ldr	r2, =clock_tenths_of_seconds
+	ldrb	r2, [r2]
+@		debug	r2
+@		mul	r1, r0, r1
+	mla	r1, r0, r1, r2
+@		debug	r1
+	ldr	r0, =clock_variable
+	str	r1, [r0]
+	ldr	r0, =ratio_fp
+	ldr	r1, =seconds_ratio_fp
+	str	r1, [r0]
+	call	determine_position_of_hand
+	ldr	r0, =current_x_position_of_end_of_hand
+	ldr	r1, =current_x_position_of_end_of_second_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r0, =current_y_position_of_end_of_hand
+	ldr	r1, =current_y_position_of_end_of_second_hand
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	return
+
+determine_position_of_hand:
+	@ draw a series of lines from the originish area to the hour in question-ish area
+	ldr	r0, =clock_variable
+	ldr	r0, [r0]
+@		debug	r0
+	ldr	r1, =ratio_fp
+	ldr	r1, [r1]
+@		debug	r1
+	mul	r2, r0, r1
+	mov	r2, r2, lsr #fixed_point_shift_by
+@		debug	r2
+	ldr	r3, =(1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table)-1
+@		debug	r3
+	cmp	r2, r3
+	movHI	r2, r3
+@		debug	r2
+@		debug	r2
+	mov	r6, r2, lsl #1
+@		debug	r6
+@	str	r2, [r12], #4
+@	ldr	r0, =display_center_x
+@	ldr	r1, =display_center_y
+	ldr	r0, =display_center_of_hands_x
+	ldr	r1, =display_center_of_hands_y
+	ldr	r2, =hand_length
+	ldrb	r2, [r2]
+	ldr	r3, =beginning_of_cosine_lookup_table
+	ldrsh	r4, [r3, r6]
+@		debug	r3
+@		debug	r6
+@		debug	r4
+@	str	r4, [r12], #4
+@	mla	r5, r2, r4, r0
+	mul	r5, r2, r4
+	mov	r5, r5, lsr #(1*fixed_point_shift_by)
+	sub	r5, r0, r5
+@	str	r5, [r12], #4
+	ldr	r3, =beginning_of_sine_lookup_table
+	ldrsh	r4, [r3, r6]
+@	str	r4, [r12], #4
+@	mla	r6, r2, r4, r1
+	mul	r6, r2, r4
+	mov	r6, r6, lsr #(1*fixed_point_shift_by)
+	add	r6, r1, r6
+@	str	r6, [r12], #4
+@	str	r12, [r12], #4
+	ldr	r0, =current_x_position_of_end_of_hand
+	strb	r6, [r0]
+	ldr	r0, =current_y_position_of_end_of_hand
+	strb	r5, [r0]
+	return
+
+@ ============================================================================
+
+set_display_brightness_based_on_ambient_light_level:
+@.warning "set_display_brightness_based_on_ambient_light_level is only for the clock"
+	push	r0-r12	@ bug/future
+	wait_for_adc_channel	channel=4
+	load_adc_channel	channel=4, destination_register=r0
+	ldr	r1, =raw_adc_channel_data
+	strh	r0, [r1]
+	@ take our light sensor input, which ends up being 0 to about 725
+	@ multiply it by 11
+	ldr	r1, =11
+	mul	r2, r0, r1
+	@ compare the result to 8192-1 (because 725*11=7975, but it could be larger than 725)
+	ldr	r3, =0x1fff
+	cmp	r2, r3
+	@ if it's above 8192-1, make it 8192-1
+	movHI	r2, r3
+	@ divide it by 2^8
+	mov	r2, r2, lsr #9
+	@ result is between 0 and f, so load display master current with that value
+	add	r2, r2, #display_brightness_additive
+	keep_it_between_unsigned_ping_pong	min=display_brightness_lowest_setting, it=r2, max=display_brightness_highest_setting
+@	cmp	r2, #display_brightness_lowest_setting
+@	ldrLO	r2, =display_brightness_lowest_setting
+@	push	r2
+	ldr	r0, =current_display_brightness_level
+	strb	r2, [r0]
+@	pop	r2
+@		ldr	r2, =2
+	display_set_master_current_from_register	master_current_register=r2
+	pop	r0-r12	@ bug/future
+	return
+

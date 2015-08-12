@@ -1,0 +1,54 @@
+major software changes:
+	talk over usb (should this be usb mass-storage or should it just talk to some pc software?)
+	program over usb
+	figure out triggering (set level, channel, edge polarity)
+	figure out trigger delay timing, based on current sampling rate
+	re-do RCO measurement using a timer to control a counter, even if that means rewiring part of it
+	implement channel B
+	battery charge monitor
+
+minor software changes:
+	nRUN is a cycle behind - it needs to be set just after finishing bootup and then setup_for_next_trigger must leave nRUN active while it's waiting for a trigger - this shows up as the first 260 samples of data read from the lab3 being junk
+	sort through the init macros and functions and make sure they're all in the right places and spread them out over some more files
+	fix all copyright notices and gpl3 notices
+	get rid of old_mode
+	get rid of warnings if they no longer apply
+	get rid of the reason for warnings that still do apply
+	capitalize all constants
+	make macros that are called more than once into functions
+	take macros that are called numerous times consecutively and separate the repeated parts out and make the rest inner loop macros
+	(clock) rewrite sin/cos generation table function to use floating point numbers
+	write all registers on reset vector, in case the reset didn't leave it in a known state
+
+major hardware changes:
+	swap amplifiers for lower power versions or ones with better heat dissipation
+
+minor hardware tests/changes:
+	wire 3.3V and 2.5V power-downs to gpios (will this work as poorly as wiring them straight to the uC?)
+
+jabberwocky hardware version 2:
+	wire up display's reset pin
+	separate power for chA and chB so just the one in use can be powered
+	fix wiring of current sense amplifiers (RS+ must be on the supply side)
+	mark jtag pin 1 outside the footprint of where the connector will be
+	put feedthroughs near amplifiers to draw heat away
+	test point for RCO on top of board
+	test points for general purpose outputs
+	make sure there's nothing around the through-hole test point pads, so the bare wire that's in a loop doesn't touch anything.  Maybe make the through-hole test points double-holed...
+
+I think these are done:
+	measure voltage drop across vout_current and compare to what the software displays
+	control lab3 triggering
+	measure RCO to get feedback to control lab3 sample rate
+	solder lab3 to board
+	display "programming" and "rebooting" and get programming makefile/script to display them
+	make get_master_clock_frequency a function, because it's called a bunch
+	get the button actions to happen just after being pressed down instead of after being let go
+	display battery voltage
+	get rid of the alternate init macro
+	control lab3's sampling frequency using measured RCO frequency and feedback
+	gather data from lab3
+
+these do not apply:
+	step up master clock by 1MHz and display freq each time to see how fast the display can be run
+

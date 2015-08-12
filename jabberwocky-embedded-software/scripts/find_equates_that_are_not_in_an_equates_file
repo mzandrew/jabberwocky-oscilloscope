@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+grep -r '\.set' src/* | grep -v equates
+

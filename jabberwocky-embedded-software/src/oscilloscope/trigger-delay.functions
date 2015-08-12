@@ -1,0 +1,524 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+setup_for_next_trigger:
+	push	r0-r12	@ bug/future
+	call	disable_the_clock_on_the_second_trigger_delay_timer_channel
+	call	setup_second_timer_counter_channel_to_reset_outputs
+	call	set_register_values_for_second_part_of_the_trigger_delay_to_reset_outputs
+	call	enable_the_clock_of_the_second_part_of_the_trigger_delay
+	call	read_the_status_register_for_the_second_part_of_the_trigger_delay
+	force_trigger_on_the_second_part_of_the_trigger_delay
+	call	wait_for_the_end_of_the_second_part_of_the_trigger_delay
+	call	disable_the_clock_on_the_second_trigger_delay_timer_channel
+	call	clear_grey_code_clock
+	call	setup_second_timer_counter_channel_to_handle_trigger_delay
+		call	set_trigger_channel_and_enable_triggering_on_the_rising_edge_of_the_output_of_the_corresponding_d_flip_flop
+	call	set_trigger_delay_from_determined_values_for_second_part_of_the_trigger_delay
+	call	trigger_clear
+@	call	activate_cmpbias
+@	call	enable_the_clock_of_the_first_part_of_the_trigger_delay
+	call	enable_the_clock_of_the_second_part_of_the_trigger_delay
+	pop	r0-r12	@ bug/future
+	return
+
+calculate_the_number_of_nanoseconds_the_whole_buffer_would_take_to_sample:
+	@ this uses r0-r3 at least, thanks to swap_floats
+	push	r0-r12	@ bug/future
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+	call	convert_double_precision_fixed_point_to_32bit_fl
+	@ r0,r1 = 32bit_fl of number of seconds per division
+@		debug	r0
+@		debug	r1
+	call	swap_floats
+	ldr	r0, =1000000000
+	call	convert_32bit_to_32bit_fl
+@		debug	r0
+@		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	@ r0,r1 = 32bit_fl of number of nanoseconds per division
+@		debug	r0
+@		debug	r1
+	call	swap_floats
+@	ldr	r0, =0
+@	add	r0, r0, #bit00<<0
+@	add	r0, r0, #bit00<<2
+@	add	r0, r0, #bit00<<4
+@	add	r0, r0, #bit00<<6
+@	add	r0, r0, #bit00<<8
+@	add	r0, r0, #bit00<<10
+@	add	r0, r0, #bit00<<12
+@	add	r0, r0, #bit00<<14
+@	add	r0, r0, #bit00<<16
+@	add	r0, r0, #bit00<<18
+@	add	r0, r0, #bit00<<20
+@	add	r0, r0, #bit00<<22
+@	add	r0, r0, #bit00<<24
+@	add	r0, r0, #bit00<<26
+@	add	r0, r0, #bit00<<28 @ 1/64
+@	add	r0, r0, #bit00<<30 @ 1/16
+@	ldr	r1, =-34
+@	ldr	r0, =0b01010101010101010101010101010101
+@	ldr	r1, =-35
+	ldr	r0, =0x55555554
+	ldr	r1, =-34
+	@ r0,r1 ~= 32bit_fl of 1/12
+	@0101 0101 0101 0101 0101 0101 0101 0101 x 2^-34 ~= 1/12
+	call	convert_32bit_fl_to_32bit_fl
+@		debug	r0
+@		debug	r1
+	@ r0,r1 ~= 32bit_fl of 1/12
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	@ r0,r1 ~= 32bit_fl of 1/12 of number of nanoseconds per division
+	@ r0,r1 ~= 32bit_fl number of nanoseconds per displayed sample
+@	add	r1, r1, #log_base_2_of_number_of_samples_per_displayed_point
+	@ r0,r1 ~= 32bit_fl number of nanoseconds per actual sample
+@		debug	r0
+@		debug	r1
+	call	swap_floats
+	ldr	r0, =lab3_number_of_samples
+	@ don't do the following, since we start at hitbus and go forward:
+@	mov	r0, r0, lsr #log_base_2_of_number_of_samples_per_displayed_point
+	call	convert_32bit_to_32bit_fl
+@		debug	r0
+@		debug	r1
+	@ r0,r1 = 32bit_fl of number of samples in a lab3 buffer
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	@ r0,r1 ~= 32bit_fl number of nanoseconds
+@		debug	r0
+@		debug	r1
+	call	convert_32bit_fl_to_32bit
+@		debug	r0
+	@ r0,r1 ~= 32bit_fl number of nanoseconds
+	ldr	r1, =desired_trigger_delay_in_nanoseconds
+	str	r0, [r1]
+	pop	r0-r12	@ bug/future
+	return
+
+@ bug/future:
+determine_trigger_delay:
+	push	r0-r12	@ bug/future
+@	ldr	r0, =number_of_nanoseconds_in_a_trigger_delay_counter_period
+	ldr	r0, =number_of_trigger_delay_counter_periods_in_a_second
+	ldr	r0, [r0]
+	call	convert_32bit_to_32bit_fl
+	@ r0,r1 = 32bit_fl of number of trigger delay counter periods in a second
+@		debug	r0
+@		debug	r1
+	call	swap_floats
+@	ldr	r0, =1000000000
+@	ldr	r0, =0
+@	add	r0, r0, #bit00<<0
+@	add	r0, r0, #bit00<<4
+@	add	r0, r0, #bit00<<6
+@	sub	r0, r0, #bit00<<8
+@	sub	r0, r0, #bit00<<11
+@	add	r0, r0, #bit00<<16
+@	add	r0, r0, #bit00<<18
+@	add	r0, r0, #bit00<<23
+@	add	r0, r0, #bit00<<25
+@	add	r0, r0, #bit00<<31
+@	ldr	r1, =-60
+	ldr	r0, =0x44b82fa1
+	ldr	r1, =-60
+	call	convert_32bit_fl_to_32bit_fl
+	@ r0,r1 ~= 32bit_fl of 1/1000000000
+@		debug	r0
+@		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	@ r0,r1 = 32bit_fl of number of trigger delay counter periods in a nanosecond
+@		debug	r0
+@		debug	r1
+	call	swap_floats
+	ldr	r0, =desired_trigger_delay_in_nanoseconds
+	ldr	r0, [r0]
+@		debug	r0
+	call	convert_32bit_to_32bit_fl
+@		debug	r0
+@		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+@		debug	r0
+@		debug	r1
+	@ r0,r1 = 32bit_fl of number of desired trigger delay counter periods
+	call	convert_32bit_fl_to_32bit
+	ldr	r1, =trigger_delay_in_timer_counter_clocks
+		mov	r0, r0, lsr #2
+@		ldr	r0, =5000
+	str	r0, [r1]
+@		debug	r0
+@	ldr	r0, =nRUN_to_RAMP_delay_in_timer_counter_clocks
+@	ldr	r0, =nRUN_to_GCCLOCK_GATE_start_delay_in_timer_counter_clocks
+@	ldr	r0, =nRUN_to_GCCLOCK_GATE_end_delay_in_timer_counter_clocks
+	pop	r0-r12	@ bug/future
+	return
+
+set_trigger_delay_from_determined_values_for_first_part_of_the_trigger_delay:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =trigger_delay_in_timer_counter_clocks
+	ldr	r1, [r1]
+@	ldr	r1, =120
+	str	r1, [r0, #TC_Channel_Register_A_offset]
+@	inc	r1	@ bug/future:  maybe this is not necessary?
+@	mov	r1, r1, lsl #1	@ bug/future:  maybe this is not necessary?
+@	ldr	r1, =240
+	str	r1, [r0, #TC_Channel_Register_B_offset]
+@	inc	r1	@ bug/future:  maybe this is not necessary?
+@	mov	r1, r1, lsl #1	@ bug/future:  maybe this is not necessary?
+@	ldr	r1, =480
+	str	r1, [r0, #TC_Channel_Register_C_offset]
+	pop	r0-r1
+	return
+
+set_trigger_delay_from_determined_values_for_second_part_of_the_trigger_delay:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r1, =nRUN_to_RAMP_delay_in_timer_counter_clocks
+	ldr	r1, [r1]
+	str	r1, [r0, #TC_Channel_Register_A_offset]
+	ldr	r1, =nRUN_to_GCCLOCK_GATE_start_delay_in_timer_counter_clocks
+	ldr	r1, [r1]
+	str	r1, [r0, #TC_Channel_Register_B_offset]
+	ldr	r1, =nRUN_to_GCCLOCK_GATE_end_delay_in_timer_counter_clocks
+	ldr	r1, [r1]
+	str	r1, [r0, #TC_Channel_Register_C_offset]
+	pop	r0-r1
+	return
+
+set_register_values_for_second_part_of_the_trigger_delay_to_reset_outputs:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r1, =1
+	str	r1, [r0, #TC_Channel_Register_A_offset]
+	str	r1, [r0, #TC_Channel_Register_B_offset]
+	str	r1, [r0, #TC_Channel_Register_C_offset]
+	pop	r0-r1
+	return
+
+set_trigger_channel_and_enable_triggering_on_the_rising_edge_of_the_output_of_the_corresponding_d_flip_flop:
+	push	r0-r3
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =trigger_delay_first_part_TC_Channel_Mode_Register_saved_value_sans_trigger_channel_selection_and_trigger_edge
+	ldr	r2, [r1]
+	ldr	r1, =0b11<<10+0b11<<8
+	mvn	r1, r1
+	and	r2, r1, r2
+@	ldr	r3, =0b01	@ select XC0/(set TC0XC0S appropriately for TCLK0/trigger-b) as the external event
+	ldr	r3, =0b10	@ select XC1/TCLK1/trigger-a as the external event
+@	ldr	r3, =0b11	@ select XC2/TCLK2/RCO as the external event
+	orr	r2, r2, r3, lsl #10
+@	ldr	r3, =0b00	@ do not do anything when an external event happens
+	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	orr	r2, r2, r3, lsl #8
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+@		debug_if_changed	r2
+	pop	r0-r3
+	return
+
+disable_triggering_on_the_rising_edge_of_the_output_of_either_d_flip_flop:
+	push	r0-r3
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =trigger_delay_first_part_TC_Channel_Mode_Register_saved_value_sans_trigger_channel_selection_and_trigger_edge
+	ldr	r2, [r1]
+	ldr	r1, =0b11<<8
+	mvn	r1, r1
+	and	r2, r1, r2
+	ldr	r3, =0b00	@ do not do anything when an external event happens
+@	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	add	r2, r2, r3, lsl #8
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+	pop	r0-r3
+	return
+
+determine_number_of_trigger_delay_counter_periods_in_a_second:
+	push	r0-r12
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r2, [r0, #TC_Channel_Mode_Register_offset]
+	ldr	r1, =0b111
+	and	r3, r2, r1
+	ldr	r1, =master_clock_frequency
+	ldr	r1, [r1]
+@	mov	r4, #2
+@	mul	r4, r3, r4
+	mov	r4, r3, lsl #1
+@	add	r4, r4, #1
+	inc	r4
+	cmp	r3, #0b100
+	addEQ	r4, r4, #1
+	@ r4 is now set to the number of bits by which the master clock is divided
+	mov	r1, r1, lsr r4
+	ldr	r0, =number_of_trigger_delay_counter_periods_in_a_second
+	str	r1, [r0]
+@		debug	r1
+	pop	r0-r12
+	return
+
+determine_number_of_nanoseconds_in_a_trigger_delay_counter_period:
+	push	r0-r5
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r2, [r0, #TC_Channel_Mode_Register_offset]
+	ldr	r1, =0b111
+	and	r3, r2, r1
+	ldr	r1, =master_clock_frequency
+	ldr	r1, [r1]
+@	mov	r4, #2
+@	mul	r4, r3, r4
+	mov	r4, r3, lsl #1
+@	add	r4, r4, #1
+	inc	r4
+	cmp	r3, #0b100
+	addEQ	r4, r4, #1
+	@ r4 is now set to the number of bits by which the master clock is divided
+	mov	r2, r1, lsr #20
+	add	r2, r1, lsr #24
+	sub	r2, r1, lsr #25
+	@ r2 ~ master clock frequency / 1,000,000
+@		debug	r2
+	mov	r2, r2, lsr r4
+@		debug	r2
+	ldr	r4, =0
+	cmp	r2, #0
+	bEQ	setup_timer_counter_channel_to_handle_trigger_delay_next_next
+	ldr	r5, =1000
+setup_timer_counter_channel_to_handle_trigger_delay_next:
+	subS	r5, r5, r2
+	addGT	r4, r4, #1
+	bGT	setup_timer_counter_channel_to_handle_trigger_delay_next
+setup_timer_counter_channel_to_handle_trigger_delay_next_next:
+@		debug	r4
+	ldr	r1, =number_of_nanoseconds_in_a_trigger_delay_counter_period
+	str	r4, [r1]
+	pop	r0-r5
+	return
+
+setup_first_timer_counter_channel_to_handle_trigger_delay:
+	push	r0-r3
+@		ldr	r0, =0x12341234
+@		debug	r0
+	ldr	r1, =bit00
+	ldr	r2, =0b000	@ select timer_clock1 = master clock / 2^1
+@	ldr	r2, =0b001	@ select timer_clock2 = master clock / 2^3
+@	ldr	r2, =0b010	@ select timer_clock3 = master clock / 2^5
+@	ldr	r2, =0b011	@ select timer_clock4 = master clock / 2^7
+@	ldr	r2, =0b100	@ select timer_clock5 = master clock / 2^10
+@	ldr	r2, =0b101	@ select external clock xc0
+@	ldr	r2, =0b110	@ select external clock xc1
+@	ldr	r2, =0b111	@ select external clock xc2
+	orr	r2, r2, #bit00<<6	@ stop the clock when counter matches RC
+@	orr	r2, r2, #bit00<<7	@ disable the clock when counter matches RC
+@	ldr	r3, =0b01	@ select XC0 as external event (which allows TIOB to be an output; see above for what XC0 is)
+@	ldr	r3, =0b10	@ select XC1 as external event (which allows TIOB to be an output; see above for what XC1 is)
+@	ldr	r3, =0b11	@ select XC2 as external event (which allows TIOB to be an output; see above for what XC2 is)
+@@	orr	r2, r2, r3, lsl #10
+	orr	r2, r2, #bit00<<12	@ ENETRG = enable the external event (resets and starts the clock)
+	ldr	r3, =0b00	@ select UP mode without automatic retrigger
+@		ldr	r3, =0b10	@ select UP mode with automatic retrigger
+@		ldr	r3, =0b01	@ select UP/DOWN mode without automatic retrigger
+@		ldr	r3, =0b11	@ select UP/DOWN mode with automatic retrigger
+	orr	r2, r2, r3, lsl #13
+	orr	r2, r2, #bit00<<15	@ enable waveform mode
+	ldr	r3, =0b01	@ TIOA/nRUN goes high when counter matches RA, which makes the lab3 stop capturing data
+	orr	r2, r2, r3, lsl #16	@ TIOA register A match
+	ldr	r3, =0b00	@ TIOA does not change when the counter matches RC
+	orr	r2, r2, r3, lsl #18	@ TIOA register C match
+	ldr	r3, =0b10	@ TIOA/nRUN goes low when the external event happens, which starts the capture of data
+@@	ldr	r3, =0b00	@ TIOA is does not change when the external event happens
+	orr	r2, r2, r3, lsl #20	@ TIOA external event
+	ldr	r3, =0b10	@ TIOA/nRUN goes low when the software trigger happens, which starts the capture of data
+	orr	r2, r2, r3, lsl #22	@ TIOA software trigger
+	ldr	r3, =0b00	@ TIOB does not change when the counter matches RB
+	orr	r2, r2, r3, lsl #24	@ TIOB register B match
+	ldr	r3, =0b10	@ TIOB is cleared when the counter matches RC
+	orr	r2, r2, r3, lsl #26	@ TIOB register C match
+	ldr	r3, =0b01	@ TIOB is set when the external event or a software trigger happens
+	orr	r2, r2, r3, lsl #28	@ TIOB external event
+	orr	r2, r2, r3, lsl #30	@ TIOB software trigger
+	ldr	r3, =0b00	@ do not do anything when an external event happens
+@	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	orr	r2, r2, r3, lsl #8
+	ldr	r1, =trigger_delay_first_part_TC_Channel_Mode_Register_saved_value_sans_trigger_channel_selection_and_trigger_edge
+	str	r2, [r1]
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+	pop	r0-r3
+	return
+
+setup_second_timer_counter_channel_to_handle_trigger_delay:
+	push	r0-r3
+@		ldr	r0, =0x67896789
+@		debug	r0
+	ldr	r2, =0b000	@ select timer_clock1 = master clock / 2^1
+@	ldr	r2, =0b001	@ select timer_clock2 = master clock / 2^3
+@	ldr	r2, =0b010	@ select timer_clock3 = master clock / 2^5
+@	ldr	r2, =0b011	@ select timer_clock4 = master clock / 2^7
+@	ldr	r2, =0b100	@ select timer_clock5 = master clock / 2^10
+@	ldr	r2, =0b101	@ select external clock xc0
+@	ldr	r2, =0b110	@ select external clock xc1
+@	ldr	r2, =0b111	@ select external clock xc2
+	ldr	r1, =bit00
+	add	r2, r2, r1, lsl #6	@ stop the clock when counter matches RC
+@	add	r2, r2, r1, lsl #7	@ disable the clock when counter matches RC
+	add	r2, r2, r1, lsl #12	@ enable the external event (resets and starts the clock)
+	add	r2, r2, r1, lsl #15	@ enable waveform mode
+@	ldr	r3, =0b01	@ select XC0 as external event (which allows TIOB to be an output; see above for what XC0 is)
+	ldr	r3, =0b10	@ select XC1 as external event (which allows TIOB to be an output; see above for what XC1 is)
+@	ldr	r3, =0b11	@ select XC2 as external event (which allows TIOB to be an output; see above for what XC2 is)
+	add	r2, r2, r3, lsl #10
+	ldr	r3, =0b00	@ select UP mode without automatic retrigger
+	add	r2, r2, r3, lsl #13
+	ldr	r3, =0b01	@ TIOA/RAMP goes high when counter matches RA, which makes the lab3 start the wilkinson ramp
+	add	r2, r2, r3, lsl #16	@ TIOA register A match
+	ldr	r3, =0b00	@ TIOA does not change when the counter matches RC
+	add	r2, r2, r3, lsl #18	@ TIOA register C match
+	ldr	r3, =0b00	@ TIOA does not change when the external event happens
+	add	r2, r2, r3, lsl #20	@ TIOA external event
+	ldr	r3, =0b00	@ TIOA does not change when the software trigger happens
+	add	r2, r2, r3, lsl #22	@ TIOA software trigger
+	ldr	r3, =0b01	@ TIOB/GCCLOCK_GATE goes high when counter matches RB, which gates the grey code clock into the lab3
+	add	r2, r2, r3, lsl #24	@ TIOB register B match
+	ldr	r3, =0b10	@ TIOB/GCCLOCK_GATE goes low when counter matches RC, which stops the grey code clock from getting into the lab3
+	add	r2, r2, r3, lsl #26	@ TIOB register C match
+	ldr	r3, =0b00	@ TIOB does not change when the external event happens
+	add	r2, r2, r3, lsl #28	@ TIOB external event
+	ldr	r3, =0b00	@ TIOB does not change when the software trigger happens
+	add	r2, r2, r3, lsl #30	@ TIOB software trigger
+@	ldr	r3, =0b00	@ do not do anything when an external event happens
+	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	add	r2, r2, r3, lsl #8
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+	pop	r0-r3
+	return
+
+setup_second_timer_counter_channel_to_reset_outputs:
+	push	r0-r3
+	ldr	r1, =bit00
+	add	r2, r2, r1, lsl #6	@ stop the clock when counter matches RC
+@	add	r2, r2, r1, lsl #7	@ disable the clock when counter matches RC
+@	add	r2, r2, r1, lsl #12	@ enable the external event (resets and starts the clock)
+	add	r2, r2, r1, lsl #15	@ enable waveform mode
+@	ldr	r3, =0b01	@ select XC0 as external event (which allows TIOB to be an output; see above for what XC0 is)
+	ldr	r3, =0b10	@ select XC1 as external event (which allows TIOB to be an output; see above for what XC1 is)
+@	ldr	r3, =0b11	@ select XC2 as external event (which allows TIOB to be an output; see above for what XC2 is)
+	add	r2, r2, r3, lsl #10
+	ldr	r3, =0b00	@ select UP mode without automatic retrigger
+	add	r2, r2, r3, lsl #13
+	ldr	r3, =0b00
+	add	r2, r2, r3, lsl #16	@ TIOA register A match
+	ldr	r3, =0b00	@ TIOA does not change when the counter matches RC
+	add	r2, r2, r3, lsl #18	@ TIOA register C match
+	ldr	r3, =0b00	@ TIOA does not change when the external event happens
+	add	r2, r2, r3, lsl #20	@ TIOA external event
+	ldr	r3, =0b10	@ TIOA goes low when the software trigger happens
+	add	r2, r2, r3, lsl #22	@ TIOA software trigger
+	ldr	r3, =0b00
+	add	r2, r2, r3, lsl #24	@ TIOB register B match
+	ldr	r3, =0b00
+	add	r2, r2, r3, lsl #26	@ TIOB register C match
+	ldr	r3, =0b00	@ TIOB does not change when the external event happens
+	add	r2, r2, r3, lsl #28	@ TIOB external event
+	ldr	r3, =0b10	@ TIOB goes low when the software trigger happens
+	add	r2, r2, r3, lsl #30	@ TIOB software trigger
+	ldr	r3, =0b00	@ do not do anything when an external event happens
+@	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	add	r2, r2, r3, lsl #8
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+	pop	r0-r3
+	return
+
+disable_the_clock_on_the_first_trigger_delay_timer_channel:
+	push	r0-r2
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+@	add	r2, r2, r1, lsl #0	@ enable this clock
+	add	r2, r2, r1, lsl #1	@ disable this clock
+@	add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r2
+	return
+
+disable_the_clock_on_the_second_trigger_delay_timer_channel:
+	push	r0-r2
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+@	add	r2, r2, r1, lsl #0	@ enable this clock
+	add	r2, r2, r1, lsl #1	@ disable this clock
+@	add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r2
+	return
+
+enable_the_clock_of_the_first_part_of_the_trigger_delay:
+	push	r0-r2
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+@ bug/future: these need to be separated so that the swtrig clears TIOA but leaves the clock disabled so that the external event can be the actual timing trigger
+	add	r2, r2, r1, lsl #0	@ enable this clock
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r2
+	return
+
+enable_the_clock_of_the_second_part_of_the_trigger_delay:
+	push	r0-r2
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ enable this clock
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r2
+	return
+
+read_the_status_register_for_the_first_part_of_the_trigger_delay:
+	push	r0
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r0, [r0, #TC_Channel_Status_Register_offset]
+	pop	r0
+	return
+
+wait_for_the_end_of_the_first_part_of_the_trigger_delay:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+wait_for_the_end_of_the_first_part_of_the_trigger_delay_next:
+	ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+	tst	r1, #1<<2	@ checks regsiter A compare
+	bEQ	wait_for_the_end_of_the_first_part_of_the_trigger_delay_next
+	pop	r0-r1
+	return
+
+read_the_status_register_for_the_second_part_of_the_trigger_delay:
+	push	r0
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r0, [r0, #TC_Channel_Status_Register_offset]
+	pop	r0
+	return
+
+wait_for_the_end_of_the_second_part_of_the_trigger_delay:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+wait_for_the_end_of_the_second_part_of_the_trigger_delay_next:
+	ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+	tst	r1, #1<<4	@ checks register C compare
+	bEQ	wait_for_the_end_of_the_second_part_of_the_trigger_delay_next
+	pop	r0-r1
+	return
+
+wait_for_the_end_of_the_grey_code_clock:
+	call	wait_for_the_end_of_the_second_part_of_the_trigger_delay
+	return
+

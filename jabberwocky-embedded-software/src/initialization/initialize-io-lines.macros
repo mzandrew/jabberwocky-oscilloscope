@@ -1,0 +1,93 @@
+
+.macro	setup_data_bus
+@	@ setup data bus:
+	.ifnc	display_data_bus_port,PIOA
+@		ldr	r2, =0xffffffff
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Write_Disable_Register_offset, saveregs=no
+		ldr	r2, =display_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Write_Enable_Register_offset, saveregs=no
+		ldr	r2, =display_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Set_Output_Data_Register_offset, saveregs=no
+@		ldr	r2, =display_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Disable_Register_offset, saveregs=no
+		ldr	r2, =display_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Enable_Register_offset, saveregs=no
+@		ldr	r2, =display_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=PIO_Disable_Register_offset, saveregs=no
+		ldr	r2, =display_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=PIO_Enable_Register_offset, saveregs=no
+		ldr	r2, =display_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset, saveregs=no
+@		ldr	r2, =display_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Pull_Up_Enable_Register_offset, saveregs=no
+	.else
+		.error "putting data bus on port b is not finished"
+	.endif
+.endm
+
+.macro	setup_display_control_lines	@ rd#, wr#, cs#, d/c#, display_reset
+	ldr	r0, =0
+	ldr	r1, =bit00
+	add	r0, r0, r1, lsl #display_rd_active_low_is_port_bit
+	add	r0, r0, r1, lsl #display_wr_active_low_is_port_bit
+	add	r0, r0, r1, lsl #display_d_high_c_low_is_port_bit
+	add	r0, r0, r1, lsl #display_cs_active_low_is_port_bit
+	orr	r0, r0, r1, lsl #display_reset_port_a_bit
+@		ldr	r1, =0x0f0ff0f0
+@		debug	r1
+@		debug	r0
+	@ the following section could be more elegant:
+	.ifnc	display_control_signals_port,PIOA
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Set_Output_Data_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Enable_Register_offset, saveregs=yes
+@		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Pull_Up_Enable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Enable_Register_offset, saveregs=yes
+	.endif
+	.ifnc	display_control_signals_port,PIOB
+@	.else @ doing else makes the clock version assemble, but stops the oscrev00 from working
+		set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r0, address_offset=Set_Output_Data_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r0, address_offset=PIO_Enable_Register_offset, saveregs=yes
+@		set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r0, address_offset=Pull_Up_Enable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r0, address_offset=Output_Enable_Register_offset, saveregs=yes
+	.endif
+.endm
+
+.macro	setup_rotary_encoder_a_input_lines
+	.if	model-oscilloscoperev00 @ only do this for the non-rev00, which uses gpios
+		ldr	r0, =0
+		ldr	r1, =bit00
+		add	r0, r0, r1, lsl #rotary_encoder_a_a_port_a_bit
+		add	r0, r0, r1, lsl #rotary_encoder_a_b_port_a_bit
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Enable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Disable_Register_offset, saveregs=yes
+	.endif
+.endm
+
+.macro	setup_button_input_lines
+	.if	model-oscilloscoperev00 @ only do this for the non-rev00, which uses gpios
+		ldr	r0, =0
+		ldr	r1, =bit00
+		add	r0, r0, r1, lsl #button_c_port_a_bit
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Enable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+		set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Disable_Register_offset, saveregs=yes
+	.endif
+.endm
+
+.macro	setup_debugging_output_lines
+	ldr	r0, =0
+	ldr	r1, =bit00
+	add	r0, r0, r1, lsl #general_purpose_output_a
+	add	r0, r0, r1, lsl #general_purpose_output_b
+	add	r0, r0, r1, lsl #general_purpose_output_c
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Set_Output_Data_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Clear_Output_Data_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Pull_Up_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Enable_Register_offset, saveregs=yes
+	@
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Disable_Register_offset, saveregs=yes
+.endm
+

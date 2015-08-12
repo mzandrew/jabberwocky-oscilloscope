@@ -1,0 +1,102 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+@ This program is free software; you can redistribute it and/or modify
+@ it under the terms of the GNU General Public License as published by
+@ the Free Software Foundation; either version 3 of the License, or
+@ (at your option) any later version.
+
+@ This program is distributed in the hope that it will be useful,
+@ but WITHOUT ANY WARRANTY; without even the implied warranty of
+@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+@ GNU General Public License for more details.
+
+@ You should have received a copy of the GNU General Public License
+@ along with this program; if not, write to the Free Software
+@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+@ or visit http://www.fsf.org/
+
+@ the equates in this file are all consequences of choices made in user-modifiable.equates
+
+.ifeq	model-clockrev00
+	@.set	use_pll, 1
+	.set	rc_clock_frequency, 29163
+@	.set	display_rd_port_a_bit, 30
+@	.set	display_wr_port_a_bit, 29
+@	.set	display_cs_port_a_bit, 28
+@	.set	display_dc_port_a_bit, 27
+	.set	rotary_encoder_a_a_port_a_bit, 18
+	.set	rotary_encoder_a_b_port_a_bit, 17
+	.set	display_control_signals_port, PIOA
+	.set	display_rd_active_low_is_port_bit, 30
+	.set	display_wr_active_low_is_port_bit, 29
+	.set	display_cs_active_low_is_port_bit, 28
+	.set	display_d_high_c_low_is_port_bit, 27
+	.set	display_data_bus_port, PIOA
+	.set	display_data_bus_bit_0_is_port_bit, 0
+	.set	display_data_bus_shift, display_data_bus_bit_0_is_port_bit
+	.set	data_bus_port_bitmask, 0b111111111<<display_data_bus_shift	@ bits PA0 to PA8 (a 9-bit interface)
+	.set	TCX, TC0	@ this is for the millisecond delays (debouncing)
+	.set	number_of_milliseconds_to_debounce_rotary_encoder, 8
+	.set	general_purpose_output_a, 26
+	.set	general_purpose_output_b, 21
+	.set	general_purpose_output_c, 19
+	.set	display_reset_port_a_bit, 22
+	.set	rotary_encoder_a_port_a_bitmask, 1<<rotary_encoder_a_a_port_a_bit + 1<<rotary_encoder_a_b_port_a_bit
+	.set	button_c_port_a_bit, 31
+	.set	spi_port_a_bitmask, 0b111100000000000
+	.set	clock_block_size, 8
+	.set	clock_face_mode_minimum, 0
+	.set	clock_face_mode_maximum, 3	@ if you change this, be sure all vector tables have that many entries+1
+	.set	rotary_encoder_a_mode_minimum, 1
+	.set	rotary_encoder_a_mode_maximum, 1
+	.set	i2c_controller_available, 0
+.endif
+
+.ifeq	model-prototypeclock
+	@.set	use_pll, 0
+	.set	rc_clock_frequency, 29971
+	.set	rotary_encoder_a_a_port_a_bit, 17
+	.set	rotary_encoder_a_b_port_a_bit, 18
+	.set	display_control_signals_port, PIOA
+	.set	display_rd_active_low_is_port_bit, 27
+	.set	display_wr_active_low_is_port_bit, 28
+	.set	display_cs_active_low_is_port_bit, 29
+	.set	display_d_high_c_low_is_port_bit, 30
+	.set	display_data_bus_port, PIOA
+	.set	display_data_bus_bit_0_is_port_bit, 0
+	.set	display_data_bus_shift, display_data_bus_bit_0_is_port_bit
+	.set	data_bus_port_bitmask, 0b111111111<<display_data_bus_shift	@ bits PA0 to PA8 (a 9-bit interface)
+	.set	TCX, TC0	@ this is for the millisecond delays (debouncing)
+	.set	number_of_milliseconds_to_debounce_rotary_encoder, 8
+	.set	general_purpose_output_a, 26
+	.set	general_purpose_output_b, 21
+	.set	general_purpose_output_c, 19
+	.set	display_reset_port_a_bit, 22
+	.set	rotary_encoder_a_port_a_bitmask, 1<<rotary_encoder_a_a_port_a_bit + 1<<rotary_encoder_a_b_port_a_bit
+	.set	button_c_port_a_bit, 31
+	.set	spi_port_a_bitmask, 0b111100000000000
+	.set	clock_block_size, 8
+	.set	clock_face_mode_minimum, 0
+	.set	clock_face_mode_maximum, 3	@ if you change this, be sure all vector tables have that many entries+1
+	.set	rotary_encoder_a_mode_minimum, 1
+	.set	rotary_encoder_a_mode_maximum, 1
+	.set	i2c_controller_available, 0
+.endif
+
+.ifeq	function-clock
+	.set	need_SPI, 1
+	.set	need_TC0, 1
+	.set	need_TC1, 1
+	.set	need_TC2, 0
+	.set	need_TC3, 0
+	.set	need_TWI, 0
+.endif
+
+@.set	hours_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 12
+.set	hours_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 720
+@.set	minutes_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 60
+.set	minutes_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 3600
+@.set	seconds_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 60
+.set	seconds_ratio_fp, 1<<fixed_point_shift_by * 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table / 600
+

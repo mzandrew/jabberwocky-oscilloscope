@@ -1,0 +1,45 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+toggle_general_purpose_output_a:
+	push	r0-r1
+	ldr	r0, =general_purpose_output_toggle_status
+	ldrb	r1, [r0]
+	inc	r1
+	strb	r1, [r0]
+	tst	r1, #bit00
+	bEQ	7f
+	turn_on_general_purpose_output	output=a, saveregs=yes
+	b	9f
+7:
+	turn_off_general_purpose_output	output=a, saveregs=yes
+9:
+	pop	r0-r1
+	return
+
+pulse_general_purpose_output_c:
+	pulse_general_purpose_output	output=c, saveregs=yes
+	return
+
+toggle_general_purpose_output_c:
+	push	r0-r1
+	ldr	r0, =general_purpose_output_toggle_status
+	ldrb	r1, [r0]
+	inc	r1
+	strb	r1, [r0]
+	tst	r1, #bit00
+	bEQ	7f
+	turn_on_general_purpose_output	output=c, saveregs=yes
+	b	9f
+7:
+	turn_off_general_purpose_output	output=c, saveregs=yes
+9:
+	pop	r0-r1
+	return
+

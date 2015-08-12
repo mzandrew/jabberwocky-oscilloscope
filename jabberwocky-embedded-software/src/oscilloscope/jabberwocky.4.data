@@ -1,0 +1,59 @@
+.data	@ non-zero initialized ram variables (gets stored in flash; must be copied to ram)
+
+color_for_the_current_trace_clipped:	.word default_color_for_the_current_trace_clipped
+color_for_trace_1_normal:	.word default_color_for_trace_1_normal
+color_for_trace_2_normal:	.word default_color_for_trace_2_normal
+color_for_trace_1_info:	.word default_color_for_trace_1_normal
+color_for_trace_2_info:	.word default_color_for_trace_2_normal
+color_for_channel_a_normal:	.word default_color_for_channel_a_normal
+color_for_channel_b_normal:	.word default_color_for_channel_b_normal
+color_for_channel_a_info:	.word default_color_for_channel_a_normal
+color_for_channel_b_info:	.word default_color_for_channel_b_normal
+color_for_horizontal_info:	.word default_color_for_horizontal_info
+
+trace_1_log_base_2_of_Volts_per_division:	.word default_trace_1_log_base_2_of_Volts_per_division
+trace_2_log_base_2_of_Volts_per_division:	.word default_trace_2_log_base_2_of_Volts_per_division
+
+vertical_offset_in_pixels_for_trace_1:	.word -2*number_of_pixels_per_vertical_division	@ this is allowed to be WAY off the screen, so not just a byte
+vertical_offset_in_pixels_for_trace_2:	.word -42	@ this is allowed to be WAY off the screen, so not just a byte
+
+autotrigger_current_number_of_milliseconds_remaining_until_forcing_a_recapture_and_redraw:	.word autotrigger_maximum_delay
+
+@ bug/future:
+@ this will have to be addition in a function somewhere for the final version so that the individual delays can be specified instead of the whole shebangs:
+.set	NRUN_TO_RAMP_DELAY_IN_TIMER_COUNTER_CLOCKS, 1
+nRUN_to_RAMP_delay_in_timer_counter_clocks:	.word NRUN_TO_RAMP_DELAY_IN_TIMER_COUNTER_CLOCKS
+nRUN_to_GCCLOCK_GATE_start_delay_in_timer_counter_clocks:	.word NRUN_TO_RAMP_DELAY_IN_TIMER_COUNTER_CLOCKS+400
+nRUN_to_GCCLOCK_GATE_end_delay_in_timer_counter_clocks:	.word NRUN_TO_RAMP_DELAY_IN_TIMER_COUNTER_CLOCKS+1000
+@ 1600-1200=400 is a good delay between ramp and gclock gate start
+@ 2600-1600=1000 is a good delay between gclock gate start and end
+
+onboard_oscilloscope_fixed_point_multiplication_factor:	.word	onboard_oscilloscope_fixed_point_base_factor
+
+.set	TRIGGER_LEVEL__DAC_NUMBER_OF_BITS, 14
+.set	TRIGGER_LEVEL__INCREMENT, 1
+.set	TRIGGER_LEVEL__MINIMUM, 0
+.set	TRIGGER_LEVEL__MAXIMUM, 1<<TRIGGER_LEVEL__DAC_NUMBER_OF_BITS
+.set	TRIGGER_LEVEL__ZERO, (125*TRIGGER_LEVEL__MAXIMUM)/330
+.set	TRIGGER_LEVEL__250_MILLIVOLTS_ABSOLUTE, (25*TRIGGER_LEVEL__MAXIMUM)/330
+
+@ channel a trigger level
+@dac_b_buffered_value:	.word TRIGGER_LEVEL__ZERO-TRIGGER_LEVEL__250_MILLIVOLTS_ABSOLUTE
+dac_b_buffered_value:	.word 1800
+@dac_b_buffered_value:	.word 0b010000000000000
+.global	dac_b_buffered_value
+
+@ channel b trigger level
+dac_d_buffered_value:	.word TRIGGER_LEVEL__ZERO
+@dac_d_buffered_value:	.word 0b010000000000000
+
+@ ROVDD (should be greater than ROGND)
+@dac_a_buffered_value:	.word 4960 @ 4960:0 = 1GHz
+dac_a_buffered_value:	.word dac_a_nominal_value
+
+@ ROGND (should be less than ROVDD)
+dac_c_buffered_value:	.word dac_c_nominal_value
+
+trigger_level_for_trace_1:	.word 1620
+trigger_level_for_trace_2:	.word 0
+

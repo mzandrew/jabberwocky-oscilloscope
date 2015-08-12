@@ -1,0 +1,246 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+setup_i2c_lines:
+	push	r0-r5
+	ldr	r0, =bit00
+	ldr	r1, =0	@ peripheral a port a on r1
+	orr	r1, r1, #bit00<<TWI_data_port_a_bit_number
+	orr	r1, r1, #bit00<<TWI_clock_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Peripheral_A_Select_Register_offset, saveregs=yes
+	ldr	r5, =0	@ open-drain ios for port a on r5
+	.ifeq	samfamily-at91sam7s
+		.ifeq	old_mode-test_twi
+			orr	r5, r5, #bit00<<TWI_data_port_a_bit_number
+			orr	r5, r5, #bit00<<TWI_clock_port_a_bit_number
+		.endif
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r5, r5, #bit00<<TWI_data_port_a_bit_number
+		orr	r5, r5, #bit00<<TWI_clock_port_a_bit_number
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r5, address_offset=PIO_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r5, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r5, address_offset=Output_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r5, address_offset=Multi_Driver_Enable_Register_offset, saveregs=yes
+	pop	r0-r5
+	return
+
+setup_other_input_output_lines:
+	push	r0-r12
+	ldr	r0, =PIOA
+@	ldr	r9, =PIOB
+	ldr	r1, =0	@ peripheral a (not PIO), port a, pull-up enabled, outputs on r1
+	ldr	r2, =0	@ peripheral b (not PIO), port a, pull-up enabled, outputs on r2
+@	ldr	r3, =0	@ peripheral a (not PIO), port b, pull-up enabled, outputs on r3
+@	ldr	r4, =0	@ peripheral b (not PIO), port b, pull-up enabled, outputs on r4
+	.ifeq	samfamily-at91sam7s
+		orr	r1, r1, #bit00<<CAL_output__port_a_bit_number
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r2, r2, #bit00<<CAL_output__port_a_bit_number
+	.endif
+	str	r1, [r0, #Pull_Up_Enable_Register_offset]
+	str	r2, [r0, #Pull_Up_Enable_Register_offset]
+	str	r1, [r0, #PIO_Peripheral_A_Select_Register_offset]
+	str	r2, [r0, #PIO_Peripheral_B_Select_Register_offset]
+	str	r1, [r0, #PIO_Disable_Register_offset]
+	str	r2, [r0, #PIO_Disable_Register_offset]
+	str	r1, [r0, #Output_Enable_Register_offset]
+	str	r2, [r0, #Output_Enable_Register_offset]
+	@
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<enable_2_point_5_Volts__port_a_bit_number
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	@
+	ldr	r1, =0	@ PIO, port a, pull-up disabled, outputs on r1
+	ldr	r2, =0	@ PIO, port a, pull-up enabled, inputs on r2
+	.ifeq	model-oscilloscoperev00
+		orr	r1, r1, #bit00<<enable_2_point_5_Volts__port_a_bit_number
+		orr	r1, r1, #bit00<<vdisplay_enable_port_a_bit
+	.endif
+	.ifeq	model-oscilloscoperev00
+		orr	r2, r2, #bit00<<button_1_port_a_bit
+		orr	r2, r2, #bit00<<button_2_port_a_bit
+	.endif
+	.ifeq	samfamily-at91sam7s
+@@bug?		orr	r2, r2, r1, lsl #button_c_port_a_bit
+		orr	r2, r2, #bit00<<button_c_port_a_bit
+	.endif
+	str	r1, [r0, #Pull_Up_Disable_Register_offset]
+	str	r2, [r0, #Pull_Up_Enable_Register_offset]
+	str	r1, [r0, #PIO_Enable_Register_offset]
+	str	r2, [r0, #PIO_Enable_Register_offset]
+	str	r1, [r0, #Output_Enable_Register_offset]
+	str	r2, [r0, #Output_Disable_Register_offset]
+	@
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=PIO_Disable_Register_offset
+	pop	r0-r12
+	return
+
+setup_labrador3_input_output_lines:
+	push	r0-r5
+	ldr	r0, =PIOA
+	ldr	r5, =PIOB
+	@
+	ldr	r1, =0	@ peripheral a (not PIO) port a on r1
+	ldr	r2, =0	@ peripheral b (not PIO) port a on r2
+	ldr	r3, =0	@ peripheral a (not PIO) port b on r3
+	ldr	r4, =0	@ peripheral b (not PIO) port b on r4
+	.ifeq	samfamily-at91sam7s
+		orr	r2, r2, #bit00<<trigger_delay__trigger_b__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__trigger_a__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__RCO__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__nRUN__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__RAMP__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__GCLOCK_GATE__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__trigger_registered__port_a_bit_number
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r3, r3, #bit00<<trigger_delay__trigger_b__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_a__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RCO__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__nRUN__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RAMP__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__GCLOCK_GATE__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_registered__port_b_bit_number
+	.endif
+	str	r1, [r0, #PIO_Peripheral_A_Select_Register_offset]
+	str	r2, [r0, #PIO_Peripheral_B_Select_Register_offset]
+	str	r3, [r5, #PIO_Peripheral_A_Select_Register_offset]
+	str	r4, [r5, #PIO_Peripheral_B_Select_Register_offset]
+	str	r1, [r0, #PIO_Disable_Register_offset]
+	str	r2, [r0, #PIO_Disable_Register_offset]
+	str	r3, [r5, #PIO_Disable_Register_offset]
+	str	r4, [r5, #PIO_Disable_Register_offset]
+	@
+	ldr	r1, =0	@ outputs for port a on r1
+	ldr	r2, =0	@  inputs for port a on r2
+	ldr	r3, =0	@ outputs for port b on r3
+	ldr	r4, =0	@  inputs for port b on r4
+	orr	r1, r1, #bit00<<seltail_port_a_bit_number
+	orr	r1, r1, #bit00<<selmain_port_a_bit_number
+	orr	r3, r3, #bit00<<trigger_delay__GCLOCK_CLEAR__port_b_bit_number
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	str	r3, [r5, #Clear_Output_Data_Register_offset]
+	str	r1, [r0, #PIO_Enable_Register_offset]
+	str	r3, [r5, #PIO_Enable_Register_offset]
+	.ifeq	samfamily-at91sam7s
+		.ifeq	old_mode-test_trigger_delay
+			@ the following 5 conflict with the way the prototype is wired up as of 2008-05-07:
+			orr	r2, r2, #bit00<<trigger_delay__trigger_b__port_a_bit_number
+			orr	r2, r2, #bit00<<trigger_delay__trigger_a__port_a_bit_number
+			orr	r2, r2, #bit00<<trigger_delay__RCO__port_a_bit_number
+			orr	r1, r1, #bit00<<trigger_delay__nRUN__port_a_bit_number
+			orr	r1, r1, #bit00<<trigger_delay__trigger_registered__port_a_bit_number
+		.endif
+		orr	r1, r1, #bit00<<trigger_delay__RAMP__port_a_bit_number
+		orr	r1, r1, #bit00<<trigger_delay__GCLOCK_GATE__port_a_bit_number
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r4, r4, #bit00<<trigger_delay__trigger_b__port_b_bit_number
+		orr	r4, r4, #bit00<<trigger_delay__trigger_a__port_b_bit_number
+		orr	r4, r4, #bit00<<trigger_delay__RCO__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__nRUN__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RAMP__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__GCLOCK_GATE__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_registered__port_b_bit_number
+	.endif
+	str	r1, [r0, #Pull_Up_Enable_Register_offset]
+	str	r3, [r5, #Pull_Up_Enable_Register_offset]
+	str	r2, [r0, #Pull_Up_Disable_Register_offset]
+	str	r4, [r5, #Pull_Up_Disable_Register_offset]
+	str	r1, [r0, #Output_Enable_Register_offset]
+	str	r3, [r5, #Output_Enable_Register_offset]
+	str	r2, [r0, #Output_Disable_Register_offset]
+	str	r4, [r5, #Output_Disable_Register_offset]
+	pop	r0-r5
+	return
+
+setup_lab3_channel_address_bus:
+	push	r0-r12 @ bug/future
+	@ setup channel_address bus:
+	.ifnc	lab3_channel_address_bus_port,PIOB
+@		ldr	r2, =0xffffffff
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Write_Disable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_channel_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Write_Enable_Register_offset, saveregs=no
+		ldr	r2, =lab3_channel_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Set_Output_Data_Register_offset, saveregs=no
+@		ldr	r2, =lab3_channel_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_channel_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Enable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_channel_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=PIO_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_channel_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=PIO_Enable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_channel_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_channel_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Pull_Up_Enable_Register_offset, saveregs=no
+	.else
+		.error "putting channel address bus on port a is not finished"
+	.endif
+	pop	r0-r12 @ bug/future
+	return
+
+setup_lab3_address_bus:
+	push	r0-r12 @ bug/future
+	@ setup address bus:
+	.ifnc	lab3_address_bus_port,PIOA
+@		ldr	r2, =0xffffffff
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Write_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Write_Enable_Register_offset, saveregs=no
+		ldr	r2, =lab3_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Set_Output_Data_Register_offset, saveregs=no
+@		ldr	r2, =lab3_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Output_Enable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=PIO_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=PIO_Enable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_address_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_address_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_a_controller_register bitmask_register=r2, address_offset=Pull_Up_Enable_Register_offset, saveregs=no
+	.else
+		.error "putting address bus on port b is not finished"
+	.endif
+	pop	r0-r12 @ bug/future
+	return
+
+setup_lab3_data_bus:
+	push	r0-r12 @ bug/future
+	@ setup data bus:
+	.ifnc	lab3_data_bus_port,PIOB
+@		ldr	r2, =0xffffffff
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Write_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Write_Enable_Register_offset, saveregs=no
+		ldr	r2, =lab3_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Set_Output_Data_Register_offset, saveregs=no
+		ldr	r2, =lab3_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Disable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Output_Enable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=PIO_Disable_Register_offset, saveregs=no
+		ldr	r2, =lab3_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=PIO_Enable_Register_offset, saveregs=no
+		ldr	r2, =lab3_data_bus_port_bitmask
+		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset, saveregs=no
+@		ldr	r2, =lab3_data_bus_port_bitmask
+@		set_bitmask_in_parallel_io_port_b_controller_register bitmask_register=r2, address_offset=Pull_Up_Enable_Register_offset, saveregs=no
+	.else
+		.error "putting data bus on port a is not finished"
+	.endif
+	pop	r0-r12 @ bug/future
+	return
+
+@ ============================================================================
+

@@ -1,0 +1,76 @@
+
+enable_programmable_clock_output_for_CAL:
+	push	r0-r2
+	ldr	r0, =PMC
+	ldr	r1, =0
+@	.ifc	CAL_output,PCK2
+		ldr	r2, =bit00<<2
+		.warning "CAL=PCK2 is hardcoded"
+@	.else
+@		.error "not implemented"
+@	.endif
+	orr	r1, r2, lsl #8 @ enable corresponding PCK output
+	str	r1, [r0, #PMC_System_Clock_Enable_Register_offset]
+	pop	r0-r2
+	return
+
+setup_programmable_clock_output_for_CAL__from_slow_clock:
+	push	r0-r2
+	ldr	r0, =PMC
+	ldr	r1, =0
+	ldr	r2, =0b00	@ choose the slow clock
+@	ldr	r2, =0b01	@ choose the main clock
+@	ldr	r2, =0b11	@ choose the pll clock
+	add	r1, r1, r2, lsl #0	@ CSS
+	ldr	r2, =0b000	@ and divide it by 1
+@	ldr	r2, =0b001	@ and divide it by 2
+@	ldr	r2, =0b010	@ and divide it by 4
+@	ldr	r2, =0b011	@ and divide it by 8
+@	ldr	r2, =0b100	@ and divide it by 16
+@	ldr	r2, =0b101	@ and divide it by 32
+@	ldr	r2, =0b110	@ and divide it by 64
+	add	r1, r1, r2, lsl #2	@ PRES
+	str	r1, [r0, #PMC_Programmable_Clock_Register_2_offset]
+	pop	r0-r2
+	return
+
+setup_programmable_clock_output_for_CAL__from_PLL_clock:
+	push	r0-r2
+	ldr	r0, =PMC
+	ldr	r1, =0
+@	ldr	r2, =0b00	@ choose the slow clock
+@	ldr	r2, =0b01	@ choose the main clock
+	ldr	r2, =0b11	@ choose the pll clock
+	add	r1, r1, r2, lsl #0	@ CSS
+@	ldr	r2, =0b000	@ and divide it by 1
+@	ldr	r2, =0b001	@ and divide it by 2
+@	ldr	r2, =0b010	@ and divide it by 4
+@	ldr	r2, =0b011	@ and divide it by 8
+@	ldr	r2, =0b100	@ and divide it by 16
+@	ldr	r2, =0b101	@ and divide it by 32
+	ldr	r2, =0b110	@ and divide it by 64
+	add	r1, r1, r2, lsl #2	@ PRES
+	str	r1, [r0, #PMC_Programmable_Clock_Register_2_offset]
+	pop	r0-r2
+	return
+
+setup_programmable_clock_output_for_CAL__from_main_clock:
+	push	r0-r2
+	ldr	r0, =PMC
+	ldr	r1, =0
+@	ldr	r2, =0b00	@ choose the slow clock
+	ldr	r2, =0b01	@ choose the main clock
+@	ldr	r2, =0b11	@ choose the pll clock
+	add	r1, r1, r2, lsl #0	@ CSS
+@	ldr	r2, =0b000	@ and divide it by 1
+@	ldr	r2, =0b001	@ and divide it by 2
+@	ldr	r2, =0b010	@ and divide it by 4
+@	ldr	r2, =0b011	@ and divide it by 8
+@	ldr	r2, =0b100	@ and divide it by 16
+@	ldr	r2, =0b101	@ and divide it by 32
+	ldr	r2, =0b110	@ and divide it by 64
+	add	r1, r1, r2, lsl #2	@ PRES
+	str	r1, [r0, #PMC_Programmable_Clock_Register_2_offset]
+	pop	r0-r2
+	return
+

@@ -1,0 +1,77 @@
+
+.macro	wait_for_n_milliseconds	n, saveregs=no
+	.ifdef	millisecond_delays_available
+		.ifc	\saveregs,yes
+			push	r0-r3
+		.endif
+		@ this will count up to 3.640 seconds (16 bit counter where 18 counts = 1ms)
+		@ the above statement is no longer correct
+		ldr	r0, =TCX
+		ldr	r1, =bit00
+		ldr	r2, =0
+		add	r2, r2, r1, lsl #1	@ disable this clock
+		str	r2, [r0, #TC_Channel_Control_Register_offset]	@ stop the counter
+		ldr	r2, =0
+		add	r2, r2, r1, lsl #0	@ enable this clock
+		add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+		ldr	r1, =number_of_TCX_clock_periods_in_one_millisecond
+		ldr	r1, [r1]
+		ldr	r3, =\n
+		mul	r3, r1, r3
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+		str	r2, [r0, #TC_Channel_Control_Register_offset]	@ start the counter
+@		ldr	r2, =18
+@		mul	r2, r2, r3
+		cmp	r1, #0
+		bEQ	2f
+@ before_waiting_for_n_milliseconds:
+1:
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+		cmp	r1, #0
+		bNE	1b
+@ waiting_for_n_milliseconds:
+2:
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+		@ wait until the counter hits n*number_of_TCX_clock_periods_in_one_millisecond
+		cmp	r1, r3
+		bLO	2b
+		.ifc	\saveregs,yes
+		pop	r0-r3
+		.endif
+	.else
+		.warning	"millisecond delays not available (there will be an approximate delay)"
+		delay_ms_imm	number_of_milliseconds=\n
+@		.warning	"millisecond delays not available (there will be no delay)"
+	.endif
+.endm
+
+.macro	reset_TC1	saveregs=no
+	.ifeq	function-clock	@ this should be a different test
+	.ifc	\saveregs,yes
+		push	r0-r2
+	.endif
+	ldr	r0, =TC1
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #1	@ disable this clock
+	str	r2, [r0, #TC_Channel_Control_Register_offset]	@ stop the counter
+	ldr	r2, [r0, #TC_Counter_Value_Register_offset]
+	cmp	r2, #0
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ enable this clock
+	add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]	@ start the counter
+	bEQ	reset_TC1_done
+reset_TC1_waiting:
+	ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+	cmp	r2, r1
+	bLS	reset_TC1_waiting
+reset_TC1_done:
+	.ifc	\saveregs,yes
+		pop	r0-r2
+	.endif
+	.endif
+.endm
+
+@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@
+

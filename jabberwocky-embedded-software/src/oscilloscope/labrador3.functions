@@ -1,0 +1,126 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+acquire_data_from_lab3:
+	push	r0-r12	@ bug/future
+		pulse_general_purpose_output	output=a, saveregs=yes
+@		pulse_general_purpose_output	output=b, saveregs=yes
+		pulse_general_purpose_output	output=c, saveregs=yes
+@	call	deactivate_cmpbias
+	call	set_lab3_channel_address
+	ldr	r0, =lab3_address_bus_port
+	ldr	r1, =lab3_data_bus_port
+	ldr	r2, =3<<lab3_address_bus_shift @ beginning address
+	ldr	r3, =1<<lab3_address_bus_shift 
+	ldr	r4, =beginning_of_raw_lab3_buffer_for_channel_a+(lab3_number_of_samples-1)*2
+@		debug	r4
+	ldr	r6, =0b1111111111111
+	call	seltail
+acquire_data_from_lab3__tail__next_address:
+	str	r2, [r0, #Output_Data_Status_Register_offset]
+@		turn_on_general_purpose_output	output=c, saveregs=yes
+@		ldr	r1, =lab3_data_bus_port
+	ldr	r5, [r1, #PIO_Controller_Pin_Data_Status_Register_offset]
+@		debug	r5
+@		turn_off_general_purpose_output	output=c, saveregs=yes
+	mov	r5, r5, lsr #lab3_data_bus_shift
+	and	r5, r5, r6
+	strh	r5, [r4], #-2
+	subS	r2, r2, r3
+	bHS	acquire_data_from_lab3__tail__next_address
+		pulse_general_purpose_output	output=c, saveregs=yes
+	call	selmain
+@		ldr	r1, =lab3_data_bus_port
+	ldr	r2, =255<<lab3_address_bus_shift @ beginning address
+acquire_data_from_lab3__main__next_address:
+	str	r2, [r0, #Output_Data_Status_Register_offset]
+@		turn_on_general_purpose_output	output=c, saveregs=yes
+@		ldr	r1, =lab3_data_bus_port
+	ldr	r5, [r1, #PIO_Controller_Pin_Data_Status_Register_offset]
+@		debug	r5
+@		turn_off_general_purpose_output	output=c, saveregs=yes
+	mov	r5, r5, lsr #lab3_data_bus_shift
+	and	r5, r5, r6
+	strh	r5, [r4], #-2
+	subS	r2, r2, r3
+	bHS	acquire_data_from_lab3__main__next_address
+	call	selnone
+		pulse_general_purpose_output	output=c, saveregs=yes
+@		debug	r4
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+seltail:
+	push	r0-r12	@ bug/future
+	ldr	r1, =bit00<<selmain_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+	@
+	ldr	r1, =bit00<<seltail_port_a_bit_number
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+	pop	r0-r12	@ bug/future
+	return
+
+selmain:
+	push	r0-r12	@ bug/future
+	ldr	r1, =bit00<<selmain_port_a_bit_number
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+	@
+	ldr	r1, =bit00<<seltail_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+	pop	r0-r12	@ bug/future
+	return
+
+selnone:
+	push	r0-r12	@ bug/future
+	ldr	r1, =bit00<<selmain_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+	@
+	ldr	r1, =bit00<<seltail_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+set_lab3_channel_address:
+	push	r0-r12	@ bug/future
+	@ set channel address
+	ldr	r2, =lab3_channel_address_bus_port
+	ldr	r3, =0b1111<<lab3_channel_address_bus_shift
+	str	r3, [r2, #Clear_Output_Data_Register_offset]
+@	ldr	r3, =0<<lab3_channel_address_bus_shift
+	ldr	r3, =1<<lab3_channel_address_bus_shift @ channel a
+@	ldr	r3, =2<<lab3_channel_address_bus_shift
+@	ldr	r3, =3<<lab3_channel_address_bus_shift @ trigger a
+@	ldr	r3, =4<<lab3_channel_address_bus_shift
+@	ldr	r3, =5<<lab3_channel_address_bus_shift @ trigger b
+@	ldr	r3, =6<<lab3_channel_address_bus_shift
+@	ldr	r3, =7<<lab3_channel_address_bus_shift @ channel b
+@	ldr	r3, =8<<lab3_channel_address_bus_shift
+@	ldr	r3, =9<<lab3_channel_address_bus_shift
+	str	r3, [r2, #Set_Output_Data_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+clear_grey_code_clock:
+	push	r0-r12
+	ldr	r0, =PIOB
+	ldr	r1, =bit00<<trigger_delay__GCLOCK_CLEAR__port_b_bit_number
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	pop	r0-r12
+	return
+
+@ ============================================================================
+

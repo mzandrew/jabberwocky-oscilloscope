@@ -1,0 +1,8 @@
+@ assembler directives
+
+.arm	@ use arm mode, not thumb mode
+.align	@ align to 32 bits
+.list	@ generate a listing
+.psize 0, 120	@ set it to not generate page feeds (break after 0 lines) and lines that are 120 columns wide
+@.cpu arm7tdmi	@ this option seems not to work
+

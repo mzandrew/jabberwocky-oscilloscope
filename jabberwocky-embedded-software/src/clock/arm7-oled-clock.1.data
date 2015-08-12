@@ -1,0 +1,26 @@
+@.align 2
+.data	@ non-zero initialized ram variables (gets stored in flash; must be copied to ram)
+
+@.align 2
+@	.byte	0, 0, 23, 0b01001000, 3, 23, 4, 07
+	@ to set the clock, use this:
+set_clock_block_read:
+	.byte	0x0, 0, 0, 0b01000100, 2, 1, 0x10, 0x07	@ read
+set_clock_block_write:
+	.byte	0x80	@ write address
+	.byte	0x00	@ seconds
+	.byte	0x49	@ minutes
+	.byte	1<<6 + 1<<5 + 0x07	@ 12=1/24=0 hour + am=1/pm=0 + hours
+	.byte	0x04	@ day of week 0x1-0x7
+	.byte	0x12	@ day of month 0x01-0x31
+	.byte	0x12	@ month of year 0x01-0x12
+	.byte	0x07	@ year of century 0x00-0x99
+
+hour_hand_length:	.byte default_hour_hand_length
+minute_hand_length:	.byte default_minute_hand_length
+second_hand_length:	.byte default_second_hand_length
+
+minute_hand_width:	.byte default_hour_hand_width
+hour_hand_width:	.byte default_minute_hand_width
+second_hand_width:	.byte default_second_hand_width
+

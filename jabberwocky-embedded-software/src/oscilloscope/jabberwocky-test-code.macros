@@ -1,0 +1,57 @@
+.macro	test_trigger_delay_macro
+	alternate_initialization_macro
+	b	main_loop
+	mypool
+	ldr	r0, =0x88880000
+@	debug	r0
+	ldr	r0, =TC_012
+	ldr	r1, [r0, #TC_Block_Mode_Register_offset]
+@	debug	r1
+@	debug_timer_counter_counter_register_values
+@	debug_timer_counter_counter_register_values
+@	autotrigger_the_labrador3
+@	force_trigger_on_the_second_part_of_the_trigger_delay
+	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+debug_me_loop:
+@	b	debug_me_loop
+@	b	main_loop
+	wait_indefinitely
+.endm
+
+.macro	test_trigger_delay_macro2
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	call	initialize_arm7_for_oscilloscope_and_initialize_oscilloscope
+	autotrigger_the_labrador3
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+@	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+@	debug_timer_counter_counter_register_values
+@	call	initialize_arm7_for_oscilloscope_and_initialize_oscilloscope
+	autotrigger_the_labrador3
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+@	debug_timer_counter_counter_register_values
+@	delay_imm	count=mydelay
+@		debug_timer_counter_counter_register_values
+@	wait_indefinitely
+.endm
+

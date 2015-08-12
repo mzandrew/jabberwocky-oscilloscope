@@ -1,0 +1,825 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+@ 2009-04-03 to 2009-04-04 wrote floating point routines
+@ 2009-11-24 divide
+
+@ ============================================================================
+@ floating point routines
+@ 31 bit mantissa:  range is 0 (0x00000000) to 1 (0x40000000) to just under 2 (0x7fffffff)
+@ 32 bit exponent
+@ sign is most significant part of the mantissa (0x80000000=negative, 0x00000000=zero or positive)
+@ value = (sign) mantissa * 2^(exponent)
+@ ============================================================================
+
+.set	number_of_bits_in_mantissa, 31 @ ignoring the sign bit
+@.set	32bit_fl_sign_bit, 1<<number_of_bits_in_mantissa
+@.set	32bit_fl_sign_threshold, 1<<number_of_bits_in_mantissa
+
+.macro	push_register_pair__first
+	push	r0-r1
+.endm
+
+.macro	pop_register_pair__first
+	pop	r0-r1
+.endm
+
+.macro	push_register_pair__second
+	push	r2-r3
+.endm
+
+.macro	pop_register_pair__second
+	pop	r2-r3
+.endm
+
+.macro	push_register_pair__third
+	push	r4-r5
+.endm
+
+.macro	pop_register_pair__third
+	pop	r4-r5
+.endm
+
+swap_floats:
+	push_register_pair__first
+	push_register_pair__second
+	pop_register_pair__first
+	pop_register_pair__second
+@	push	r0-r1
+@	push	r2-r3
+@	pop	r0-r1
+@	pop	r2-r3
+	return
+
+swap_floats__first_and_third:
+	push_register_pair__first
+	push_register_pair__third
+	pop_register_pair__first
+	pop_register_pair__third
+	return
+
+swap_floats__second_and_third:
+	push_register_pair__second
+	push_register_pair__third
+	pop_register_pair__second
+	pop_register_pair__third
+	return
+
+@ ============================================================================
+
+negate_32bit_fl:
+@	push	r-r
+	rsb	r0, r0, #0
+	call	convert_32bit_fl_to_32bit_fl
+@		call	debug_32bit_fl__unity
+@	pop	r-r
+	return
+
+@ ============================================================================
+
+convert_double_precision_fixed_point_to_32bit_fl:
+	@ input is r0
+	@ output is r0=mantissa, r1=exponent
+	ldr	r1, =-double_precision_fixed_point_shift_by
+	call	convert_32bit_fl_to_32bit_fl
+	return
+
+convert_12bit_fixed_point_to_32bit_fl:
+	@ input is r0
+	@ output is r0=mantissa, r1=exponent
+	ldr	r1, =-12
+	call	convert_32bit_fl_to_32bit_fl
+	return
+
+convert_fixed_point_to_32bit_fl:
+	@ input is r0
+	@ output is r0=mantissa, r1=exponent
+	ldr	r1, =-fixed_point_shift_by
+	call	convert_32bit_fl_to_32bit_fl
+	return
+
+convert_32bit_fl_to_fixed_point:
+	push	r1
+	@ input is r0=mantissa, r1=exponent
+	@ output is r0
+	add	r1, r1, #fixed_point_shift_by
+	call	convert_32bit_fl_to_32bit
+	pop	r1
+	return
+
+convert_32bit_fl_to_32bit_fl:
+	@ input is r0=mantissa, r1=exponent
+	@ output is r0=mantissa, r1=exponent
+	@ this makes sure the value takes up the most significant part of the register
+	push	r2-r4
+@		push	r2-r6
+	mov	r2, r0 @ r2 = input value
+	cmp	r0, #0
+	ldrEQ	r1, =0
+	bEQ	convert_32bit_fl_to_32bit_fl_done_done
+		mvnMI	r0, r0
+@		ldr	r5, =32bit_fl_sign_bit
+@		and	r6, r0, r5
+@		mvn	r5, r5
+@		and	r0, r0, r5
+@		bPL	convert_32bit_fl_to_32bit_fl__plus
+@convert_32bit_fl_to_32bit_fl__minus:
+		@call	find_most_significant_zero_bit_position
+@		mvn	r0, r0
+@		call	find_most_significant_nonzero_bit_position
+@		b	convert_32bit_fl_to_32bit_fl__next
+@		sub	r3, r0, #(number_of_bits_in_mantissa-1) @ r3 = exponent = msb-(number_of_bits_in_mantissa-1)
+@		neg	r4, r3
+@		mov	r0, r2, lsl r4
+@		add	r1, r1, r3
+@		b	convert_32bit_fl_to_32bit_fl_done_done:
+@convert_32bit_fl_to_32bit_fl__plus:
+@convert_32bit_fl_to_32bit_fl__next:
+	call	find_most_significant_nonzero_bit_position
+	sub	r3, r0, #(number_of_bits_in_mantissa-1) @ r3 = exponent = msb-(number_of_bits_in_mantissa-1)
+	neg	r4, r3
+	mov	r0, r2, lsl r4
+	add	r1, r1, r3
+@		eor	r0, r0, r6
+convert_32bit_fl_to_32bit_fl_done_done:
+@		pop	r2-r6
+	pop	r2-r4
+	return
+
+convert_32bit_to_32bit_fl:
+	@ input is r0
+	@ output is r0=mantissa, r1=exponent
+	push	r2-r3
+	mov	r2, r0 @ r2 = input value
+	cmp	r0, #0
+	ldrEQ	r1, =0
+	bEQ	convert_32bit_to_32bit_fl_done
+		mvnMI	r0, r0
+	call	find_most_significant_nonzero_bit_position
+	sub	r1, r0, #(number_of_bits_in_mantissa-1) @ r1 = exponent = msb-(number_of_bits_in_mantissa-1)
+	neg	r3, r1
+	mov	r0, r2, lsl r3
+convert_32bit_to_32bit_fl_done:
+	pop	r2-r3
+	return
+
+convert_32bit_fl_to_32bit:
+	@ input is r0=mantissa and r1=exponent
+	@ output is r0
+	cmp	r1, #0
+	bMI	convert_32bit_fl_to_32bit_negative
+convert_32bit_fl_to_32bit_positive:
+	mov	r0, r0, lsl r1
+	b	convert_32bit_fl_to_32bit_done
+convert_32bit_fl_to_32bit_negative:
+	push	r1
+	neg	r1, r1
+	@mov	r0, r0, lsr r1
+		mov	r0, r0, asr r1
+	pop	r1
+convert_32bit_fl_to_32bit_done:
+	return
+
+@ ============================================================================
+
+add_32bit_i_to_32bit_i_with_32bit_i_result:
+	@ input = r0 and r1, each a 32bit_i
+	@ output is r0, a 32bit_i
+	push	r1-r3
+	push	r1
+	call	convert_32bit_to_32bit_fl
+	call	swap_floats
+@	mov	r2, r0
+@	mov	r3, r1
+	pop	r0
+	call	convert_32bit_to_32bit_fl
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+	call	convert_32bit_fl_to_32bit
+	pop	r1-r3
+	return
+
+.ifc	asd,aer
+add_32bit_fl_to_32bit_fl_with_32bit_fl_result:
+	@ input is r0=mantissa, r1=exponent for addend a
+	@ input is r2=mantissa, r3=exponent for addend b
+	@ output is r0=mantissa, r1=exponent for sum
+	push	r2-r5
+	@ example:
+	@ r0=c0000000, r1=-29, so addend a is (3=0b011)<<30 * 2^-29 = 6*2^1 = 6
+	@ r2=a0000000, r3=-27, so addend b is (5=0b101)<<29 * 2^-27 = 5*2^2 = 20
+	@ result should be 26:  r0=(0x1a)<<27=(0b11010)<<27=d0000000, r1=(5-32)=-27
+	@ another example should be considered where r1 and/or r3 are positive
+	cmp	r1, r3
+	bEQ	alternate_add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@		dec	r1
+@		dec	r3
+@		mov	r0, r0, lsr #1
+@		mov	r2, r2, lsr #1
+	subS	r4, r1, r3 @ r4 = -2
+	rsbLT	r4, r4, #0 @ abs(r4) = 2
+	movLT	r0, r0, lsr r4 @ r0 = 30000000
+	movLT	r1, r3 @ r1 = -27
+	movGT	r2, r2, lsr r4
+	movGT	r3, r1
+	add	r4, r0, r2
+	bVC add_32bit_fl_to_32bit_fl_with_32bit_fl_result__no_overflow
+	add	r1, r1, #2
+	mov	r0, r0, lsr #1
+	mov	r2, r2, lsr #1
+	add	r4, r0, r2
+@	dec	r1
+@	mov	r4, r4, lsr #1
+@	ldr	r3, =bit00
+@	orr	r4, r4, r3, lsl #(number_of_bits_in_mantissa-1)
+add_32bit_fl_to_32bit_fl_with_32bit_fl_result__no_overflow:
+@		add	r1, r1, #2
+	mov	r0, r4
+	call	convert_32bit_fl_to_32bit_fl
+	pop	r2-r5
+	return
+alternate_add_32bit_fl_to_32bit_fl_with_32bit_fl_result:
+@	add	r4, r0, r2
+@	sub	r5, r4, r0
+@	cmp	r5, r2
+@	bEQ alternate_add_32bit_fl_to_32bit_fl_with_32bit_fl_result__equal
+	add	r1, r1, #1
+	mov	r0, r0, lsr #1
+	mov	r2, r2, lsr #1
+	add	r4, r0, r2
+@alternate_add_32bit_fl_to_32bit_fl_with_32bit_fl_result__equal:
+	mov	r0, r4
+	call	convert_32bit_fl_to_32bit_fl
+	pop	r2-r5
+	return
+.endif
+
+add_32bit_fl_to_32bit_fl_with_32bit_fl_result:
+	@ input is r0=mantissa, r1=exponent for addend a
+	@ input is r2=mantissa, r3=exponent for addend b
+	@ output is r0=mantissa, r1=exponent for sum
+	push	r2-r5
+	@ example:
+	@ r0=c0000000, r1=-29, so addend a is (3=0b011)<<30 * 2^-29 = 6*2^1 = 6
+	@ r2=a0000000, r3=-27, so addend b is (5=0b101)<<29 * 2^-27 = 5*2^2 = 20
+	@ result should be 26:  r0=(0x1a)<<27=(0b11010)<<27=d0000000, r1=(5-32)=-27
+	@ another example should be considered where r1 and/or r3 are positive
+@		debug	r0
+@		debug	r1
+@		debug	r2
+@		debug	r3
+	subS	r4, r1, r3 @ r4 = -2
+	rsbLT	r4, r4, #0 @ abs(r4) = 2
+	@movLT	r0, r0, lsr r4 @ r0 = 30000000
+		movLT	r0, r0, asr r4 @ r0 = 30000000
+	movLT	r1, r3 @ r1 = -27
+	movGT	r2, r2, lsr r4
+	movGT	r3, r1
+@		debug	r4
+@		debug	r0
+@		debug	r1
+@		debug	r2
+@		debug	r3
+	addS	r4, r0, r2
+	bCC add_32bit_fl_to_32bit_fl_with_32bit_fl_result__no_overflow
+	add	r1, r1, #1
+@		debug	r1
+	@mov	r0, r0, lsr #1
+	@mov	r2, r2, lsr #1
+		mov	r0, r0, asr #1
+		mov	r2, r2, asr #1
+	add	r4, r0, r2
+@		debug	r0
+@		debug	r2
+add_32bit_fl_to_32bit_fl_with_32bit_fl_result__no_overflow:
+@		debug	r4
+	mov	r0, r4
+	call	convert_32bit_fl_to_32bit_fl
+@		debug	r0
+@		debug	r1
+	pop	r2-r5
+	return
+
+@ ============================================================================
+
+multiply_32bit_by_32bit_with_32bit_result:
+	@ input is r0 and r1
+	@ output is r0
+	push	r1
+	call	multiply_32bit_by_32bit_with_32bit_fl_result
+	call	convert_32bit_fl_to_32bit
+	pop	r1
+	return
+
+multiply_32bit_by_32bit_with_32bit_fl_result:
+	@ input is r0 and r1
+	@ output is r0=mantissa, r1=exponent
+	push	r2-r4
+	mov	r4, r0
+	mov	r0, r1
+	call	convert_32bit_to_32bit_fl
+	call	swap_floats
+@	mov	r2, r0
+@	mov	r3, r1
+	mov	r0, r4
+	call	convert_32bit_to_32bit_fl
+	@ r0=mantissa, r1=exponent for multiplicand a
+	@ r2=mantissa, r3=exponent for multiplicand b
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	pop	r2-r4
+	return
+
+multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result:
+	@ input is r0=mantissa, r1=exponent for multiplicand a
+	@ input is r2=mantissa, r3=exponent for multiplicand b
+	@ output is r0=mantissa, r1=exponent for product
+	push	r2-r12	@ bug/future
+	@umull	r4, r5, r0, r2
+	smull	r4, r5, r0, r2
+	mov	r0, r5
+	add	r1, r1, r3
+	add	r1, r1, #32 @ because we're taking only the high 32bit word
+	cmp	r0, #0
+	ldrEQ	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+	pop	r2-r12	@ bug/future
+	return
+
+multiply_32bit_fl_by_32bit_fl_with_32bit_i_result:
+	@ input is r0=mantissa, r1=exponent for multiplicand a
+	@ input is r2=mantissa, r3=exponent for multiplicand b
+	@ output is r0=integer product
+	push	r1-r12	@ bug/future
+	@umull	r4, r5, r0, r2
+		smull	r4, r5, r0, r2
+	mov	r0, r5
+	add	r1, r1, r3
+	add	r1, r1, #32 @ because we're taking only the high 32bit word
+	cmp	r0, #0
+	ldrEQ	r1, =0
+	call	convert_32bit_fl_to_32bit
+	pop	r1-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+.ifc	asdf,asdg
+multiply_32bit_fl_by_32bit_fl_and_add_32bit_fl:
+	push	r0-r12	@ bug/future
+	.warning "unfinished function!"
+	pop	r0-r12	@ bug/future
+	return
+.endif
+
+@ ============================================================================
+
+divide_32bit_fl_by_32bit_fl_with_32bit_fl_result:
+@	.error "unfinished divide routine"
+	@ long division for [r0,r1] / [r2,r3]
+	@ input is r0=mantissa, r1=exponent for  a
+	@ input is r2=mantissa, r3=exponent for divisor b
+	@ output is r0=mantissa, r1=exponent for quotient
+	push	r2-r12	@ bug/future
+	@ r4 = 1
+	@ r5 = counter
+	@ r6 = partial result
+	@ r7 = running counter that is the number of places to shift denomonator by when comparing / subtracting
+	ldr	r4, =1
+	ldr	r5, =number_of_bits_in_mantissa-1
+	ldr	r6, =0
+	ldr	r7, =0
+	@
+	@ 1100 / 1010 = 1.00110011... because:
+	@
+	@          1.00110011...
+	@      -----------------
+	@ 1010 |1100.
+	@       1010.
+	@         10.000
+	@          1.010
+	@            1100
+	@            1010 <- repeats
+	@
+	@    ____________a._______
+	@ r2 | r0
+	@         - a * r2
+	@      r0 - a * r2
+	@
+	call	convert_32bit_fl_to_32bit_fl
+@	.error "do the same normalization for the other operand"
+@	.error "make everything positive and then divide"
+@	mov	r0, r0, lsr #1
+@	mov	r2, r2, lsr #1
+@	inc	r1
+@	inc	r3
+divide_32bit_fl_by_32bit_fl_with_32bit_fl_result__next:
+	cmp	r0, r2, lsr r7                                         @ will r0-r2 give a positive or zero result?
+	orrGE	r6, r6, r4, lsl r5                                 @ if r0>=r2, save a 1 in the current bit position of the result
+	bEQ	divide_32bit_fl_by_32bit_fl_with_32bit_fl_result__done @ if it is exactly equal, the rest of the bits are zero
+	subGT	r0, r0, r2, lsr r7                                 @ if r0>=r2 do the subtraction
+@	movLT	r2, r2, lsr #1
+@	movLT	r0, r0, lsl #1
+	@addLT	r7, r7, #1
+	inc	r7                                                     @ effectively divide r2 by two (equivalently, effectively multiply r0 by two)
+	@ the following three instructions are optional and only provide a potentially more accurate result:
+	tst	r0, r4, lsl #30                                        @ if r0 can be shifted to the left...
+	movNE	r0, r0, lsl #1                                     @ ...shift it
+	subNE	r7, r7, #1                                         @ ...and effectively do the opposite to r2
+	@ r7 must remain positive or zero or the shifts above won't work as expected
+	dec	r5                                                     @ repeat for a total of 30 bits
+	bNE	divide_32bit_fl_by_32bit_fl_with_32bit_fl_result__next
+divide_32bit_fl_by_32bit_fl_with_32bit_fl_result__done:
+	mov	r0, r6
+	sub	r1, r1, r3
+	call	convert_32bit_fl_to_32bit_fl
+	pop	r2-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+.ifc	asdf,asdfc
+generate_lookup_tables_32:
+	@ it's easier to generate sine and cosine at the same time
+	@ at 18.432 MHz and no PLL or divide scaling and FWS=0
+	@ this takes 1.99 ms for a table size of 128 each for sine and cosine
+	@ this takes 3.94 ms for a table size of 256 each for sine and cosine
+	@ this takes 7.86 ms for a table size of 512 each for sine and cosine
+	push	r0-r10
+	@ re-generate 1/n fixed_point table for n up to 20
+	@ this requires fixed_point_shift_by to be less than 16
+	@ldr	r0, =1
+	@ldr	r0, r0, lsl #(16-fixed_point_shift_by)
+	ldr	r0, =(16-fixed_point_shift_by)
+	ldr	r1, =maximum_n
+	ldr	r2, =one_over_n_fp_lookup_table
+0:	ldrh	r3, [r2]
+	cmp	r3, #0
+	ldrEQ	r3, =65536
+	@mul	r4, r3, r0
+	mov	r3, r3, lsr r0
+	strh	r3, [r2], #2
+	dec	r1
+	bHI	0b
+
+	@ generate sine and cosine lookup tables:
+@	ldr	r0, =size_of_lookup_table
+@	ldr	r0, =0xff00ff00	@ to compare against for pseudo-floating-point
+@	ldr	r0, =0x00100000	@ to compare against for pseudo-floating-point
+@	ldr	r0, =0xffffffff	@ to compare against for pseudo-floating-point
+	ldr	r1, =0	@ m = angle step (angle_step out of size_of_lookup_table)
+	ldr	r2, =two_pi_fp
+@	mov	r2, r2, lsl #1	@ 2 * pi_fp
+@	ldr	r3, =beginning_of_cosine_lookup_table
+	ldr	r4, =beginning_of_sine_lookup_table
+	@ r10 = one_over_n_fp_lookup_table
+	@ r11 = one_over_n_fp
+	ldr	r12, =maximum_n
+@	ldr	r0, =160
+next_angle_32:
+	ldr	r5, =1	@ current term; b_n = b_{n-1} * a*x / n (where a*x is the angle in radians), but first term is 1
+	mov	r5, r5, lsl #fixed_point_shift_by
+	mul	r6, r1, r2	@ angle (a*x) := 2*pi_fp * angle_step
+@	mul	r6, r0, r6
+@	mov	r6, r6, lsr #7
+@	@ r6 = 0.75 * angle
+@	mov	r6, r6, lsr #log_base_2_of_size_of_lookup_table @ angle :/= size_of_lookup_table
+	mov	r6, r6, lsr #log_base_2_of_four_fifths_of_the_size_of_the_lookup_table @ angle :/= size_of_lookup_table
+	ldr	r10, =one_over_n_fp_lookup_table
+	@sub	r6, r6, r2, lsr #1
+	@add	r6, r6, r2, lsr #1
+@	cmp	r1, #size_of_entire_lookup_table_in_words>>1
+@	cmp	r1, #size_of_entire_lookup_table_in_words*3/4
+@	movHS	r5, r5, lsr #pseudo_floating_point_shift_by
+@	cmp	r1, #size_of_entire_lookup_table_in_words*11/16
+@	movLO	r5, r5, lsl #pseudo_floating_point_shift_by
+@	cmp	r1, #size_of_entire_lookup_table_in_words*5/16
+@	movLO	r5, r5, lsr #pseudo_floating_point_shift_by
+.ifc	asdf,eho
+@	cmp	r1, #size_of_entire_lookup_table_in_words*3/4
+@	movHS	r5, r5, lsr #pseudo_floating_point_shift_by
+@	cmp	r1, #size_of_entire_lookup_table_in_words*7/8
+@	movHS	r5, r5, lsr #pseudo_floating_point_shift_by
+.endif
+@	cmp	r1, #size_of_entire_lookup_table_in_words*3/4
+0:	ldr	r7, =0	@ n
+	mov	r8, r5	@ running sum of cosine terms
+	ldr	r9, =0	@ running sum of sine terms
+n_1_5_9_13_17:	inc	r7
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r6, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r11, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x / n
+	add	r9, r9, r5	@ this term is part of the sine
+n_2_6_10_14_18:	inc	r7
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r6, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r11, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x / n
+@	sub	r8, r8, r5	@ this term is part of the cosine
+n_3_7_11_15_19:	inc	r7
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r6, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r11, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x / n
+	sub	r9, r9, r5	@ this term is part of the sine
+n_4_8_12_16_20:	inc	r7
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r6, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+@	cmp	r5, r0
+@	movHS	r5, r5, lsr #fixed_point_shift_by
+	mul	r5, r11, r5
+@	movLO	r5, r5, lsr #fixed_point_shift_by
+	mov	r5, r5, lsr #fixed_point_shift_by
+	@  b_n := b_{n-1} * a*x / n
+@	add	r8, r8, r5	@ this term is part of the cosine
+	cmp	r7, r12
+	bLO	n_1_5_9_13_17
+	
+@	cmp	r1, #size_of_entire_lookup_table_in_words*3/4
+@	movHS	r8, r8, lsl #pseudo_floating_point_shift_by
+@	movHS	r9, r9, lsl #pseudo_floating_point_shift_by
+@	cmp	r1, #size_of_entire_lookup_table_in_words*5/16
+@	movLO	r8, r8, lsl #pseudo_floating_point_shift_by
+@	movLO	r9, r9, lsl #pseudo_floating_point_shift_by
+@	cmp	r1, #size_of_entire_lookup_table_in_words*11/16
+@	movLO	r8, r8, lsr #pseudo_floating_point_shift_by
+@	movLO	r9, r9, lsr #pseudo_floating_point_shift_by
+
+@	strh	r8, [r3], #2
+	strh	r9, [r4], #2
+	inc	r1
+	ldr	r11, =size_of_entire_lookup_table_in_words
+	cmp	r1, r11
+	bLO	next_angle_32
+
+	pop	r0-r10
+	return
+.endif
+
+.ifne	need_sine_and_cosine_lookup_table
+generate_lookup_tables_64:
+	@ it's easier to generate sine and cosine at the same time
+	@ at 18.432 MHz and no PLL or divide scaling and FWS=0
+	@ this takes 1.99 ms for a table size of 128 each for sine and cosine
+	@ this takes 3.94 ms for a table size of 256 each for sine and cosine
+	@ this takes 7.86 ms for a table size of 512 each for sine and cosine
+	push	r0-r10
+	@ re-generate 1/n fixed_point table for n up to 20
+	@ this requires fixed_point_shift_by to be less than 16
+	@ldr	r0, =1
+	@ldr	r0, r0, lsl #(16-fixed_point_shift_by)
+	ldr	r0, =(16-fixed_point_shift_by)
+	ldr	r1, =maximum_n
+	ldr	r2, =one_over_n_fp_lookup_table
+0:	ldrh	r3, [r2]
+	cmp	r3, #0
+	ldrEQ	r3, =65536
+	@mul	r4, r3, r0
+	mov	r3, r3, lsr r0
+	strh	r3, [r2], #2
+	dec	r1
+	bHI	0b
+	@ generate sine and cosine lookup tables:
+	ldr	r1, =0	@ m = angle step (angle_step out of size_of_lookup_table)
+	ldr	r2, =two_pi_fp
+@	ldr	r2, =pi_fp
+@	mov	r2, r2, lsl #1	@ 2 * pi_fp
+	ldr	r4, =beginning_of_sine_lookup_table
+	@ r10 = one_over_n_fp_lookup_table
+	@ r11 = one_over_n_fp
+	ldr	r12, =maximum_n
+@	ldr	r0, =0
+@	ldr	r3, =0
+@	ldr	r8, =0
+	ldr	r0, =(1<<fixed_point_shift_by)-1
+	@ r8 = the high part of the 64 bit result
+next_angle_64:
+	ldr	r5, =1	@ current term; b_n = b_{n-1} * a*x / n (where a*x is the angle in radians), but first term is 1
+	mov	r5, r5, lsl #fixed_point_shift_by
+	mul	r6, r1, r2	@ angle (a*x) := 2*pi_fp * angle_step
+	mov	r6, r6, lsr #log_base_2_of_four_fifths_of_the_size_of_the_lookup_table @ angle :/= size_of_lookup_table
+	ldr	r10, =one_over_n_fp_lookup_table
+0:	ldr	r7, =0	@ n
+	ldr	r9, =0	@ running sum of sine terms
+n_1_5_9_13_17_21:	inc	r7
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r6, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+@	smull	r5, r8, r6, r5
+@	mov	r5, r5, lsr #fixed_point_shift_by
+@	and	r3, r8, r0
+@	mov	r8, r8, lsr #fixed_point_shift_by
+@	add	r5, r5, r3, lsl #(32-fixed_point_shift_by)
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r11, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x / n
+	add	r9, r9, r5	@ this term is part of the sine
+n_2_6_10_14_18_22:	inc	r7
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r6, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r11, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x / n
+n_3_7_11_15_19_23:	inc	r7
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r6, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r11, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x / n
+	sub	r9, r9, r5	@ this term is part of the sine
+n_4_8_12_16_20_24:	inc	r7
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r6, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x
+	ldrh	r11, [r10], #2
+	fixed_point_multiply	result_high_register=r8, result_low_register=r5, multiplicand_1_register=r11, multiplicand_2_register=r5, bitmask_register=r0, temporary_register=r3
+	@  b_n := b_{n-1} * a*x / n
+	cmp	r7, r12
+	bLO	n_1_5_9_13_17_21
+@	strh	r9, [r4], #2
+	@ clamp the output to plus or minus 0x7fff
+	@ range is 0x8001 (negative 0x7fff) to 0x7fff (positive 0x7fff)
+	@ so 0x8000 is never used
+	ldr	r11, =0x7fff
+	movS	r9, r9
+	bPL	positive
+negative:
+	rsb	r3, r9, #0
+	cmp	r3, r11
+	bLO	gen64_done
+@		debug	r9
+@		debug	r3
+	mov	r9, r11
+	rsb	r9, r9, #0
+@		debug	r9
+	b	gen64_done
+positive:
+	cmp	r9, r11
+	movHI	r9, r11
+gen64_done:
+@	dec	r9	@ this is a fudge because 7fff is SO close to 8000
+@	dec	r9	@ this is a fudge because 7fff is SO close to 8000
+@	but that fucks up the minute hand when it's supposed to be =45 minutes
+	strh	r9, [r4], #2
+	inc	r1
+@	ldr	r11, =size_of_entire_lookup_table_in_words
+@	cmp	r1, r11
+	ldr	r11, =end_of_cosine_lookup_table
+	cmp	r4, r11
+	bLS	next_angle_64
+	pop	r0-r10
+	return
+.endif
+
+.ifne	need_sine_and_cosine_lookup_table
+.ifc	asdf,asdf
+show_lookup_table:
+@ ~1400 bytes
+	@ debug the sine/cosine lookup table generation:
+	push	r0-r12
+@	ldr	r3, =beginning_of_sine_lookup_table
+	ldr	r3, =beginning_of_cosine_lookup_table
+	mov	r11, r3
+@	ldr	r0, =64
+@	add	r11, r3, r0
+@	add	r11, r3, #64
+	ldr	r0, =0
+	ldr	r1, =64
+	ldr	r2, =4
+@	ldr	r9, =1
+@	mov	r9, r9, lsl #fixed_point_shift_by
+	ldr	r4, =blue
+	ldr	r6, =127
+	ldr	r7, =0
+	ldr	r10, =24
+#	ldr	r8, =32
+	ldr	r8, =64
+	ldr	r12, =0xff000000
+@7:	ldrsh	r5, [r11], #2
+7:	ldrsh	r5, [r11], #4
+	movS	r5, r5
+	rsbLT	r5, r5, #0
+	mul	r5, r10, r5
+	mov	r5, r5, lsr #fixed_point_shift_by
+	rsbLT	r5, r5, #0
+	sub	r5, r8, r5
+@	rsb	r5, r5, #0
+	tst	r5, r12
+	ldrNE	r5, =0
+	cmp	r5, r2
+	movLO	r5, r2
+	cmp	r5, r6
+	movHI	r5, r6
+	push	r0-r12
+	display_set_color_of_single_pixel	x_coordinate_register=r7, y_coordinate_register=r5, color_register=r4
+	pop	r0-r12
+	inc	r7
+	cmp	r7, r6
+	bLS	7b
+	pop	r0-r12
+	return
+	push	r0-r12
+	mov	r11, r3
+@	ldr	r0, =64
+@	add	r11, r3, r0
+	ldr	r12, =end_of_sine_lookup_table
+@	add	r12, r12, #size_of_lookup_table
+	add	r12, r12, #2
+@	sub	r12, r12, #2
+@	ldr	r0, =160
+@	ldr	r1, =size_of_lookup_table
+@	mul	r2, r0, r1
+@	mov	r2, r2, lsr #7
+	@ r11 = beginning of lookup table
+	@ r12 = end of lookup table
+	ldr	r0, =0xff000000
+	ldr	r1, =64
+@	ldr	r1, =24
+	ldr	r2, =4
+@	ldr	r9, =1
+@	mov	r9, r9, lsl #fixed_point_shift_by
+	ldr	r4, =red
+	ldr	r10, =green
+	ldr	r6, =127
+	ldr	r7, =0
+	ldr	r8, =96
+8:	ldrsh	r5, [r11], #2
+	ldrsh	r3, [r12], #-2
+@	sub	r5, r5, r3
+	add	r5, r5, r3
+	movS	r5, r5
+	rsbLT	r5, r5, #0
+	mul	r5, r1, r5
+	mov	r5, r5, lsr #fixed_point_shift_by
+	rsbLT	r5, r5, #0
+	sub	r5, r8, r5
+	ldr	r0, =0xff000000
+	tst	r5, r0
+	ldrNE	r5, =0
+	cmp	r5, r2
+	movLO	r5, r2
+	cmp	r5, r6
+	movHI	r5, r6
+	push	r0-r12
+	display_set_color_of_single_pixel	x_coordinate_register=r7, y_coordinate_register=r8, color_register=r4
+	pop	r0-r12
+	push	r0-r12
+	display_set_color_of_single_pixel	x_coordinate_register=r7, y_coordinate_register=r5, color_register=r10
+	pop	r0-r12
+	inc	r7
+	cmp	r7, r6
+	bLS	8b
+	pop	r0-r12
+	return
+.endif
+.endif
+
+.ifdef	testmode
+fixed_point_inverse:
+	push	r0-r12	@ bug/future
+	ldr	r0, =fixed_point_inverse_value
+	ldr	r1, [r1]
+	cmp	r1, #0
+	bEQ	fixed_point_inverse_divide_by_zero_not_allowed
+fixed_point_inverse_divide_by_zero_not_allowed:
+	ldr	r1, =overflow_fixed_point_unsigned
+	b	fixed_point_inverse_done
+fixed_point_inverse_next:
+	.error "not finished"
+fixed_point_inverse_done:
+	pop	r0-r12	@ bug/future
+	return
+.endif
+

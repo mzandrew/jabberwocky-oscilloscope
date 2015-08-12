@@ -1,0 +1,19 @@
+
+.macro	old_i2c_read_a_byte	address, destination_register
+	ldr	r3, =\address
+	call	i2c_read_a_byte
+	mov	\destination_register, r
+.endm
+
+.macro	i2c_read_a_byte	address
+	ldr	r3, =\address
+	call	i2c_read_a_byte
+	@ destination is r0
+.endm
+
+.macro	i2c_write_a_byte	byte_to_write, address
+	ldr	r4, =\byte_to_write
+	ldr	r3, =\address
+	call	i2c_write_a_byte
+.endm
+

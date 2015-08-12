@@ -1,0 +1,26 @@
+.set	normal, 1			@ arbitrary number, different from the rest
+.set	test_trigger_delay, 2		@ arbitrary number, different from the rest
+.set	test_frequency_measurement, 3	@ arbitrary number, different from the rest
+.set	test_twi, 4			@ arbitrary number, different from the rest
+
+.set	prototypeclock, 20		@ arbitrary number, different from the rest
+.set	clockrev00, 21			@ arbitrary number, different from the rest
+.set	prototypeoscilloscope, 22	@ arbitrary number, different from the rest
+.set	oscilloscoperev00, 23		@ arbitrary number, different from the rest
+
+.set	clock, 40			@ arbitrary number, different from the rest
+.set	oscilloscope, 41		@ arbitrary number, different from the rest
+
+.set	at91sam7s, 60			@ arbitrary number, different from the rest
+.set	at91sam7a3, 61			@ arbitrary number, different from the rest
+
+.set	use_oled_display, bit00<<0
+.set	use_TC0_and_TC1_for_trigger_delay, bit00<<1
+.set	use_TC2_for_RCO_measurement, bit00<<2
+.set	use_TC2_for_millisecond_delays, bit00<<3
+.set	use_TC0_for_AtoD_timing, bit00<<4
+.set	use_onboard_oscilloscope_functionality, bit00<<5
+@.set	debug, bit00<<6
+@.set	debug2, bit00<<7
+@.set	use_, bit00<<8
+

@@ -1,0 +1,56 @@
+
+@ ============================================================================
+
+.macro	enable_timer_counter_channel_for_onboard_oscilloscope_triggering
+	.error "this macro does not work"
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =bit00<<0
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+.endm
+
+.macro	disable_timer_counter_channel_for_onboard_oscilloscope_triggering
+	.error "this macro does not work"
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =bit00<<1
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+.endm
+
+.macro wait_for_onboard_oscilloscope_to_finish_acquiring_data
+0:
+	call	check_whether_onboard_oscilloscope_has_finished_aquiring_data
+	ldr	r0, =currently_retrieving_data_so_do_not_autotrigger
+	ldrb	r0, [r0]
+	cmp	r0, #0
+	bNE	0b
+.endm
+
+@ ============================================================================
+
+.macro	save_state_of_onboard_oscilloscope
+	@ wrong:  need to pause the colection of onboard oscilloscope data before getting any other data
+	@ update:  this can only be used while the oscilloscope is not acquiring data
+	@ see function oscilloscope_once_a_millisecond just before restarting onboard oscilloscope timer/counter
+@	wait_for_onboard_oscilloscope_to_finish_acquiring_data
+@	disable_timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r0, =onboard_oscilloscope_fixed_point_multiplication_factor
+	ldr	r1, [r0]
+	push	r1
+	ldr	r0, =currently_selected_analog_input
+	ldrb	r1, [r0]
+	push	r1
+.endm
+
+.macro	restore_state_of_onboard_oscilloscope
+	@ restore the old analog input setting:
+	pop	r1
+	ldr	r0, =currently_selected_analog_input
+	strb	r1, [r0]
+	pop	r1
+	ldr	r0, =onboard_oscilloscope_fixed_point_multiplication_factor
+	str	r1, [r0]
+	call	select_input_for_i2c_analog_multiplexer
+@	enable_timer_counter_channel_for_onboard_oscilloscope_triggering
+.endm
+
+@ ============================================================================
+

@@ -1,0 +1,27 @@
+#!/bin/bash -e
+
+declare source="${HOME}/documents/software/jabberwocky/"
+declare destination_dirbase="$(dirname "${source}")/backup"
+
+declare name=$(basename "${source}")
+declare comment="${@}"
+declare date_string=$(date_func date_and_time_without_colons)
+
+if [ -z "${date_string}" ]; then
+	echo "error:  date string is empty" >&2
+	exit 5
+fi
+
+#if [ -z "${comment}" ]; then
+#else
+#fi
+declare destination_filename="${date_string}.${name}.${comment}"
+declare destination="${destination_dirbase}/${destination_filename}"
+
+set -x
+echo "\"${name}\" -> \"${destination}\""
+rsync --archive "${source}" "${destination}"
+touch "${destination}"
+cd "${destination_dirbase}"
+tar -cf "${destination_filename}.tar" "${destination_filename}"
+

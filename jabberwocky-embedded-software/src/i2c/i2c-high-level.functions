@@ -1,0 +1,419 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+setup_i2c_gpio_devices:
+	push	r0-r5
+
+setup_gpio1:
+	@ set useful defaults for gpio lines (before setting the in/out-ness):
+	ldr	r5, =0
+@	orr	r5, r5, #bit00<<gpio1_polarity_select_io_number
+	orr	r5, r5, #bit00<<gpio1_trigger_clear_io_number
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a0_io_number
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a1_io_number
+	ldr	r1, =gpio1_buffered_value
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+
+	@ set which lines are inputs and which lines are outputs:
+	ldr	r5, =0
+	orr	r5, r5, #bit00<<gpio1_polarity_select_io_number
+	orr	r5, r5, #bit00<<gpio1_trigger_clear_io_number
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a0_io_number
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a1_io_number
+	mvn	r5, r5	@ invert it, because 1=input
+	ldr	r3, =gpio1_i2c_address
+	ldr	r4, =3	@ configuration register
+	call	i2c_write_a_byte_with_internal_address
+
+setup_gpio2:
+	@ set useful defaults for gpio lines (before setting the in/out-ness):
+	ldr	r5, =0
+	orr	r5, r5, #bit00<<gpio2_usb_pullup_active_low_io_number
+	ldr	r1, =gpio2_buffered_value
+	strb	r5, [r1]
+	call	update_gpio2_from_buffered_value
+
+	@ set which lines are inputs and which lines are outputs:
+	ldr	r5, =0
+	orr	r5, r5, #bit00<<gpio2_usb_pullup_active_low_io_number
+	mvn	r5, r5	@ invert it, because 1=input
+	ldr	r3, =gpio2_i2c_address
+	ldr	r4, =3	@ configuration register
+	call	i2c_write_a_byte_with_internal_address
+
+setup_gpio3:
+	@ set useful defaults for gpio lines (before setting the in/out-ness):
+	ldr	r5, =0
+@	orr	r5, r5, #bit00<<gpio3_cmpbias_short_io_number
+@@	orr	r5, r5, #bit00<<gpio3_channel_b_multiplexer_a0_io_number
+@@	orr	r5, r5, #bit00<<gpio3_channel_b_multiplexer_a1_io_number
+@	orr	r5, r5, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+@	orr	r5, r5, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	ldr	r1, =gpio3_buffered_value
+	strb	r5, [r1]
+	call	update_gpio3_from_buffered_value
+
+	@ set which lines are inputs and which lines are outputs:
+	ldr	r5, =0
+	orr	r5, r5, #bit00<<gpio3_cmpbias_short_io_number
+	orr	r5, r5, #bit00<<gpio3_channel_b_multiplexer_a0_io_number
+	orr	r5, r5, #bit00<<gpio3_channel_b_multiplexer_a1_io_number
+	orr	r5, r5, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+	orr	r5, r5, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	mvn	r5, r5	@ invert it, because 1=input
+	ldr	r3, =gpio3_i2c_address
+	ldr	r4, =3	@ configuration register
+	call	i2c_write_a_byte_with_internal_address
+
+	pop	r0-r5
+	return
+
+@ ============================================================================
+
+update_gpio1_from_buffered_value:
+	push	r0-r5
+	ldr	r1, =gpio1_buffered_value
+	ldrb	r5, [r1]
+	ldr	r3, =gpio1_i2c_address
+	ldr	r4, =1	@ output port register
+	call	i2c_write_a_byte_with_internal_address
+	pop	r0-r5
+	return
+
+update_gpio2_from_buffered_value:
+	push	r0-r5
+	ldr	r1, =gpio2_buffered_value
+	ldrb	r5, [r1]
+	ldr	r3, =gpio2_i2c_address
+	ldr	r4, =1	@ output port register
+	call	i2c_write_a_byte_with_internal_address
+	pop	r0-r5
+	return
+
+update_gpio3_from_buffered_value:
+	push	r0-r5
+	ldr	r1, =gpio3_buffered_value
+	ldrb	r5, [r1]
+	ldr	r3, =gpio3_i2c_address
+	ldr	r4, =1	@ output port register
+	call	i2c_write_a_byte_with_internal_address
+	pop	r0-r5
+	return
+
+@ ============================================================================
+
+turn_on_quaddacs_internal_reference:
+	push	r0-r5
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+	ldr	r0, =0b111 @ setup internal voltage reference
+	orr	r4, r4, r0, lsl #3
+	ldr	r5, =0
+	ldr	r6, =0
+	orr	r6, r6, #bit00<<0 @ enable internal voltage reference
+	call	i2c_write_two_bytes_with_internal_address
+	pop	r0-r5
+	return
+
+activate_cmpbias:
+	push	r0-r2
+	ldr	r0, =gpio3_buffered_value
+	ldr	r1, [r0]
+	ldr	r2, =bit00<<gpio3_cmpbias_short_io_number
+	mvn	r2, r2
+	and	r1, r1, r2
+	strb	r1, [r0]
+	call	update_gpio3_from_buffered_value
+	pop	r0-r2
+	return
+
+deactivate_cmpbias:
+	push	r0-r1
+	ldr	r0, =gpio3_buffered_value
+	ldr	r1, [r0]
+	orr	r1, r1, #bit00<<gpio3_cmpbias_short_io_number
+	strb	r1, [r0]
+	call	update_gpio3_from_buffered_value
+	pop	r0-r1
+	return
+
+update_dac_a_from_buffered_value:
+	push	r0-r6
+	ldr	r1, =dac_a_buffered_value
+	ldr	r0, [r1]
+	@  first byte = bit13 through bit06 of 14 bit value
+	@ second byte = bit05 through bit00 of 14 bit value, plus 2 "don't care" bits
+	mov	r5, r0, lsr #8-2
+	mov	r6, r0, lsl #2
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+@	orr	r4, r4, #bit00<<6 @ byte selection (whether to send command byte on subsequent transfers)
+	ldr	r0, =0b000 @ dac a
+@	ldr	r0, =0b001 @ dac b
+@	ldr	r0, =0b010 @ dac c
+@	ldr	r0, =0b011 @ dac d
+@	ldr	r0, =0b100 @ all dacs
+	orr	r4, r4, r0, lsl #0
+	ldr	r0, =0b000 @ write value to input register
+@	ldr	r0, =0b001 @ update the corresponding output
+@	ldr	r0, =0b011 @ write value to one dac and update the corresponding output immediately
+	orr	r4, r4, r0, lsl #3
+	call	i2c_write_two_bytes_with_internal_address
+	ldr	r1, =dac_a_buffered_value
+	ldr	r0, [r1]
+	@  first byte = bit13 through bit06 of 14 bit value
+	@ second byte = bit05 through bit00 of 14 bit value, plus 2 "don't care" bits
+	mov	r5, r0, lsr #8-2
+	mov	r6, r0, lsl #2
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+@	orr	r4, r4, #bit00<<6 @ byte selection (whether to send command byte on subsequent transfers)
+	ldr	r0, =0b000 @ dac a
+@	ldr	r0, =0b001 @ dac b
+@	ldr	r0, =0b010 @ dac c
+@	ldr	r0, =0b011 @ dac d
+@	ldr	r0, =0b100 @ all dacs
+	orr	r4, r4, r0, lsl #0
+@	ldr	r0, =0b000 @ write value to input register
+	ldr	r0, =0b001 @ update the corresponding output
+@	ldr	r0, =0b011 @ write value to one dac and update the corresponding output immediately
+	orr	r4, r4, r0, lsl #3
+	call	i2c_write_two_bytes_with_internal_address
+	pop	r0-r6
+	return
+
+update_dac_b_from_buffered_value:
+	push	r0-r6
+	ldr	r1, =dac_b_buffered_value
+	ldr	r0, [r1]
+	@  first byte = bit13 through bit06 of 14 bit value
+	@ second byte = bit05 through bit00 of 14 bit value, plus 2 "don't care" bits
+	mov	r5, r0, lsr #8-2
+	mov	r6, r0, lsl #2
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+@	orr	r4, r4, #bit00<<6 @ byte selection (whether to send command byte on subsequent transfers)
+@	ldr	r0, =0b000 @ dac a
+	ldr	r0, =0b001 @ dac b
+@	ldr	r0, =0b010 @ dac c
+@	ldr	r0, =0b011 @ dac d
+@	ldr	r0, =0b100 @ all dacs
+	orr	r4, r4, r0, lsl #0
+	ldr	r0, =0b011 @ write value to one dac and update the corresponding output immediately
+	orr	r4, r4, r0, lsl #3
+	call	i2c_write_two_bytes_with_internal_address
+	pop	r0-r6
+	return
+
+update_dac_c_from_buffered_value:
+	push	r0-r6
+	ldr	r1, =dac_c_buffered_value
+	ldr	r0, [r1]
+	@  first byte = bit13 through bit06 of 14 bit value
+	@ second byte = bit05 through bit00 of 14 bit value, plus 2 "don't care" bits
+	mov	r5, r0, lsr #8-2
+	mov	r6, r0, lsl #2
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+@	orr	r4, r4, #bit00<<6 @ byte selection (whether to send command byte on subsequent transfers)
+@	ldr	r0, =0b000 @ dac a
+@	ldr	r0, =0b001 @ dac b
+	ldr	r0, =0b010 @ dac c
+@	ldr	r0, =0b011 @ dac d
+@	ldr	r0, =0b100 @ all dacs
+	orr	r4, r4, r0, lsl #0
+	ldr	r0, =0b011 @ write value to one dac and update the corresponding output immediately
+	orr	r4, r4, r0, lsl #3
+	call	i2c_write_two_bytes_with_internal_address
+	pop	r0-r6
+	return
+
+update_dac_d_from_buffered_value:
+	push	r0-r6
+	ldr	r1, =dac_d_buffered_value
+	ldr	r0, [r1]
+	@  first byte = bit13 through bit06 of 14 bit value
+	@ second byte = bit05 through bit00 of 14 bit value, plus 2 "don't care" bits
+	mov	r5, r0, lsr #8-2
+	mov	r6, r0, lsl #2
+	ldr	r3, =quaddacs_i2c_address
+	ldr	r4, =0
+@	orr	r4, r4, #bit00<<6 @ byte selection (whether to send command byte on subsequent transfers)
+@	ldr	r0, =0b000 @ dac a
+@	ldr	r0, =0b001 @ dac b
+@	ldr	r0, =0b010 @ dac c
+	ldr	r0, =0b011 @ dac d
+@	ldr	r0, =0b100 @ all dacs
+	orr	r4, r4, r0, lsl #0
+	ldr	r0, =0b011 @ write value to one dac and update the corresponding output immediately
+	orr	r4, r4, r0, lsl #3
+	call	i2c_write_two_bytes_with_internal_address
+	pop	r0-r6
+	return
+
+@ ============================================================================
+
+.macro	select_channel_a_multiplexer	a0=0, a1=0
+	@ the registers used here could be moved down to r0-r2 probably
+	@ this should only be used in the select_channel_a_multiplexer_4 et al
+	@ functions, since they do other things in addition to just changing the multiplexer
+	push	r0-r5
+	ldr	r1, =gpio1_buffered_value
+	ldrb	r5, [r1]
+	ldr	r4, =0
+	orr	r4, r4, #bit00<<gpio1_channel_a_multiplexer_a0_io_number
+	orr	r4, r4, #bit00<<gpio1_channel_a_multiplexer_a1_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+.ifc	\a0,1
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a0_io_number
+.endif
+.ifc	\a1,1
+	orr	r5, r5, #bit00<<gpio1_channel_a_multiplexer_a1_io_number
+.endif
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+	pop	r0-r5
+.endm
+
+select_channel_a_multiplexer_1:
+	select_channel_a_multiplexer	a0=0, a1=0
+	push	r0-r1
+@	ldr	r0, =lab3_offset__channel_a__multiplexer_1
+@	ldr	r1, =lab3_offset__channel_a
+@	str	r0, [r1]
+	pop	r0-r1
+	return
+
+select_channel_a_multiplexer_2:
+	select_channel_a_multiplexer	a0=1, a1=0
+	push	r0-r1
+@	ldr	r0, =lab3_offset__channel_a__multiplexer_2
+@	ldr	r1, =lab3_offset__channel_a
+@	str	r0, [r1]
+	pop	r0-r1
+	return
+
+select_channel_a_multiplexer_3:
+	select_channel_a_multiplexer	a0=0, a1=1
+	return
+	push	r0-r1
+@	ldr	r0, =lab3_offset__channel_a__multiplexer_3
+@	ldr	r1, =lab3_offset__channel_a
+@	str	r0, [r1]
+	pop	r0-r1
+
+select_channel_a_multiplexer_4:
+	select_channel_a_multiplexer	a0=1, a1=1
+	push	r0-r1
+@	ldr	r0, =lab3_offset__channel_a__multiplexer_4
+@	ldr	r1, =lab3_offset__channel_a
+@	str	r0, [r1]
+	pop	r0-r1
+	return
+
+turn_on_plus_and_minus_5V_supplies:
+	@ the registers used here could be moved down to r0-r2 probably
+	push	r0-r5
+	ldr	r1, =gpio3_buffered_value
+	ldrb	r5, [r1]
+	orr	r4, r4, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+	orr	r4, r4, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+	orr	r5, r5, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+	orr	r5, r5, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	strb	r5, [r1]
+	call	update_gpio3_from_buffered_value
+	pop	r0-r5
+	return
+
+turn_off_plus_and_minus_5V_supplies:
+	@ the registers used here could be moved down to r0-r2 probably
+	push	r0-r5
+	ldr	r1, =gpio3_buffered_value
+	ldrb	r5, [r1]
+	orr	r4, r4, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+	orr	r4, r4, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+@	orr	r5, r5, #bit00<<gpio3_shutdown_plus_5V_active_low_io_number
+@	orr	r5, r5, #bit00<<gpio3_shutdown_minus_5V_active_low_io_number
+	strb	r5, [r1]
+	call	update_gpio3_from_buffered_value
+	pop	r0-r5
+	return
+
+trigger_clear:
+	push	r0-r5
+	ldr	r1, =gpio1_buffered_value
+	ldrb	r5, [r1]
+	orr	r4, r4, #bit00<<gpio1_trigger_clear_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+@	orr	r5, r5, #bit00<<gpio1_trigger_clear_io_number
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+	orr	r5, r5, #bit00<<gpio1_trigger_clear_io_number
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+	pop	r0-r5
+	return
+
+select_rising_edge:
+	push	r0-r5
+	ldr	r1, =gpio1_buffered_value
+	ldrb	r5, [r1]
+	orr	r4, r4, #bit00<<gpio1_polarity_select_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+@	orr	r5, r5, #bit00<<gpio1_polarity_select_io_number
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+	pop	r0-r5
+	return
+
+select_falling_edge:
+	push	r0-r5
+	ldr	r1, =gpio1_buffered_value
+	ldrb	r5, [r1]
+	orr	r4, r4, #bit00<<gpio1_polarity_select_io_number
+	mvn	r4, r4	@ invert all bits in r4
+	and	r5, r4, r5
+	orr	r5, r5, #bit00<<gpio1_polarity_select_io_number
+	strb	r5, [r1]
+	call	update_gpio1_from_buffered_value
+	pop	r0-r5
+	return
+
+@ ============================================================================
+
+select_no_input_for_i2c_analog_multiplexer:
+	push	r0-r4
+	ldr	r3, =analog_multiplexer_i2c_address
+	ldr	r4, =0
+	call	i2c_write_a_byte
+	pop	r0-r4
+	return
+
+select_input_for_i2c_analog_multiplexer:
+	@ the analog multiplexer is capable of having any of the eight switches on or off at the same time
+	@ but that functionality is not used here
+	push	r0-r4
+	ldr	r1, =currently_selected_analog_input
+	ldrb	r0, [r1]
+	dec	r0	@ numbering is from 1-8, but the configuration register byte needs 0-7
+	ldr	r1, =bit00
+	ldr	r3, =analog_multiplexer_i2c_address
+	mov	r4, r1, lsl r0
+	call	i2c_write_a_byte
+		delay_ms_imm	number_of_milliseconds=5 @ takes about 5ms to switch analog channels
+	pop	r0-r4
+	return
+
+@ ============================================================================
+

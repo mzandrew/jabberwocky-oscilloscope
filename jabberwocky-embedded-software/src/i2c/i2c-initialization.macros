@@ -1,0 +1,47 @@
+
+setup_twi_for_i2c:
+	push	r0-r12	@ bug/future
+@	ldr	r1, =bit00
+@	ldr	r2, =0
+@	add	r2, r2, r1, lsl #7	@ software reset
+@	str	r2, [r0, #TWI_Control_Register_offset]
+	@ set i2c clock frequency
+@		ldr	r0, =0x77778888
+@		debug	r0
+	ldr	r1, =master_clock_frequency
+	ldr	r1, [r1]
+	ldr	r2, =0
+	add	r2, r2, r1, lsr #17
+	add	r2, r2, r1, lsr #19
+	add	r2, r2, r1, lsr #21
+	sub	r2, r2, r1, lsr #26
+	add	r2, r2, r1, lsr #29
+	sub	r2, r2, r1, lsr #31
+	@ r2 now is approximately the master clock frequency divided by 100,000
+@	mov	r2, r2, lsr #1
+	@ by an odd coincidence, the above divide routine leaves the number at 199 when it should be 200
+	@ and that works well in the TWI clock set functionality because the first thing to do is subtract 3
+	@ and then divide by 4 (the way it'll go in this device, anyway)
+	@ the result is an integer, whereas if the divide routine had been accurate, it would have been truncated
+@		debug	r2
+	sub	r2, r2, #3	@ r2 = T_low_or_high / T_mck - 3
+	ldr	r0, =2	@ r0 = CKDIV
+	mov	r2, r2, lsr r0	@ r2 = desired value for CLDIV or CHDIV
+@		debug	r2
+	add	r2, r2, r2, lsl #8
+	add	r2, r2, r0, lsl #16
+	@ r2 = CLDIV + CHDIV<<8 + CKDIV<<16
+	ldr	r0, =TWI
+	str	r2, [r0, #TWI_Clock_Waveform_Generator_Register_offset]
+@		debug	r2
+	@ set master enabled
+	ldr	r1, =bit00
+	ldr	r2, =0
+@	add	r2, r2, r1, lsl #0	@ start
+@	add	r2, r2, r1, lsl #1	@ stop
+	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+	str	r2, [r0, #TWI_Control_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+

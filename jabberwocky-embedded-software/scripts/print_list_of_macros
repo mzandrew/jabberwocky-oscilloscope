@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+#grep -r '^\.macro' ${dir}/* | sed -e "s,\([^: ]\+\):\.macro[\t ]\+\([^ \t]*\).*,\2,"
+
+declare base_dir="$(dirname $0)/.."
+declare script_dir="${base_dir}/scripts"
+declare source_dir="${base_dir}/src"
+
+${script_dir}/cat_all_source_files -h --no-comments | grep '^\.macro' | sed -e "s,^\(\.macro[\t ]\+\)\([^\t ,]\+\).*,\2," | grep -v '\.macro'
+

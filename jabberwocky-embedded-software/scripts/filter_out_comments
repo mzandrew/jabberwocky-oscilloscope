@@ -1,0 +1,24 @@
+#!/bin/bash -e
+
+declare print_filename="no"
+
+declare base_dir="$(dirname $0)/.."
+declare script_dir="${base_dir}/scripts"
+. "${script_dir}/script_functions"
+
+for each; do
+	if [ "${each}" = "-H" ]; then
+		print_filename="yes"
+	elif [ "${each}" = "-h" ]; then
+		print_filename="no"
+	elif [ -e "${each}" ]; then
+		if [ "${print_filename}" = "yes" ]; then
+			#cat "${each}" | filter_comments | filter_whitespace | filter_blank_lines | prepend_filename
+			cat "${each}" | filter_comments | filter_whitespace_lines | prepend_filename
+		else
+			#cat "${each}" | filter_comments | filter_whitespace | filter_blank_lines
+			cat "${each}" | filter_comments | filter_whitespace_lines | filter_blank_lines
+		fi
+	fi
+done
+

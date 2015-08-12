@@ -1,0 +1,308 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ frankenspank code size measuring tool:
+@frank:
+@spank:
+@.set	frankenspank, spank-frank
+@.global	frankenspank
+
+@ ============================================================================
+
+get_raw_status_of_all_buttons_and_rotary_encoders:
+	@ this is where you customize button polarity and rotary encoder phase and polarity
+	push	r0-r12	@ bug/future
+	ldr	r0, =0
+	@ r0 = running total of raw status
+	@ r1 = temporary
+	@ r2 = temporary
+	@ r3 = temporary
+	@ r4 = temporary
+	ldr	r1, =PIOA
+	ldr	r3, [r1, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, #bit00<<button_1_port_a_bit
+	orrEQ	r0, r0, #bit00<<button_1__index
+	@
+	tst	r3, #bit00<<button_2_port_a_bit
+	orrEQ	r0, r0, #bit00<<button_2__index
+	@
+	push	r0
+	ldr	r3, =gpio2_i2c_address
+	ldr	r4, =0
+	call	i2c_read_a_byte_with_internal_address
+	mov	r1, r0 @ r1 = byte read from port
+	pop	r0
+	tst	r1, #bit00<<gpio2_rot1_sw_io_number
+	orrEQ	r0, r0, #bit00<<button_a__index
+	tst	r1, #bit00<<gpio2_rot1_b_io_number
+	orrEQ	r0, r0, #bit00<<rotary_encoder_a_b__index
+	tst	r1, #bit00<<gpio2_rot1_a_io_number
+	orrEQ	r0, r0, #bit00<<rotary_encoder_a_a__index
+	@
+	push	r0
+	ldr	r3, =gpio3_i2c_address
+	ldr	r4, =0
+	call	i2c_read_a_byte_with_internal_address
+	mov	r1, r0 @ r1 = byte read from port
+	pop	r0
+	tst	r1, #bit00<<gpio3_rot2_sw_io_number
+	orrEQ	r0, r0, #bit00<<button_b__index
+	tst	r1, #bit00<<gpio3_rot2_b_io_number
+	orrEQ	r0, r0, #bit00<<rotary_encoder_b_b__index
+	tst	r1, #bit00<<gpio3_rot2_a_io_number
+	orrEQ	r0, r0, #bit00<<rotary_encoder_b_a__index
+	@
+	ldr	r1, =button_and_rotary_encoder_raw_status
+	str	r0, [r1]
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=button_and_rotary_encoder_raw_status, address_of_new_value=button_and_rotary_encoder_raw_status, x_position=14, y_position=18, type_of_value=word, color=blue
+	pop	r0-r12	@ bug/future
+	return
+
+predicate_appropriate_button_and_rotary_encoder_changes:
+	@ this actually goes through and performs the desired changes
+	@ and then clears the corresponding deltas (so they are updated immediately)
+	push	r0-r12	@ bug/future
+	ldr	r5, =button_and_rotary_encoder_delta
+	ldr	r5, [r5]
+	ldr	r9, =button_and_rotary_encoder_current_status
+	ldr	r9, [r9]
+	ldr	r6, =bit00
+	ldr	r7, =0b11
+	ldr	r8, =0
+	@ r8 = running total of how many things necessitate redrawing the display
+	@
+	@ buttons
+	@
+predicate_appropriate_button_and_rotary_encoder_changes__button_1:
+	tst	r5, r6, lsl #button_1__index
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_1_done
+	bic	r5, r6, lsl #button_1__index @ clear corresponding delta
+	tst	r9, r6, lsl #button_1__index @ make sure we just get the "down" button press delta
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_1_done
+	call	button_1_toggle_something
+predicate_appropriate_button_and_rotary_encoder_changes__button_1_done:
+predicate_appropriate_button_and_rotary_encoder_changes__button_2:
+	tst	r5, r6, lsl #button_2__index
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_2_done
+	bic	r5, r6, lsl #button_2__index @ clear corresponding delta
+	tst	r9, r6, lsl #button_2__index @ make sure we just get the "down" button press delta
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_2_done
+	call	shutdown
+predicate_appropriate_button_and_rotary_encoder_changes__button_2_done:
+predicate_appropriate_button_and_rotary_encoder_changes__button_a:
+	tst	r5, r6, lsl #button_a__index
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_a_done
+	bic	r5, r6, lsl #button_a__index @ clear corresponding delta
+	tst	r9, r6, lsl #button_a__index @ make sure we just get the "down" button press delta
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_a_done
+	ldr	r0, =rotary_encoder_a_oscilloscope_mode
+	ldrb	r1, [r0]
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	ldr	r2, =rotary_encoder_a_oscilloscope_mode_old
+	strb	r1, [r2]
+	mov	r2, r1
+	inc	r1
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	strb	r1, [r0]
+	cmp	r1, r2
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_a_done
+	inc	r8
+	call	display_rotary_encoder_a_oscilloscope_mode_info
+predicate_appropriate_button_and_rotary_encoder_changes__button_a_done:
+	@
+predicate_appropriate_button_and_rotary_encoder_changes__button_b:
+	tst	r5, r6, lsl #button_b__index @ clear corresponding delta
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_b_done
+	bic	r5, r6, lsl #button_b__index
+	tst	r9, r6, lsl #button_b__index @ make sure we just get the "down" button press delta
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_b_done
+	ldr	r0, =rotary_encoder_b_oscilloscope_mode
+	ldrb	r1, [r0]
+	keep_it_between_signed	min=rotary_encoder_b_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_b_oscilloscope_mode_maximum
+	ldr	r2, =rotary_encoder_b_oscilloscope_mode_old
+	strb	r1, [r2]
+	mov	r2, r1
+	inc	r1
+	keep_it_between_signed	min=rotary_encoder_b_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_b_oscilloscope_mode_maximum
+	strb	r1, [r0]
+	cmp	r1, r2
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__button_b_done
+	inc	r8
+	call	display_rotary_encoder_b_oscilloscope_mode_info
+predicate_appropriate_button_and_rotary_encoder_changes__button_b_done:
+	@
+	@ rotary encoders
+	@
+predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_a:
+	tst	r5, r7, lsl #rotary_encoder_a_a__index
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_a_done
+	mov	r0, r5, lsr #rotary_encoder_a_a__index
+@	bic	r5, r7, lsl #rotary_encoder_a_a__index
+	and	r0, r0, r7
+	mov	r0, r0, lsl #30
+@		debug	r0
+	mov	r0, r0, asr #30
+	ldr	r1, =rotary_encoder_a_signed_delta_stable
+	strb	r0, [r1]
+	vectored_call	rotary_encoder_a_oscilloscope_mode_minimum, rotary_encoder_a_oscilloscope_mode, rotary_encoder_a_oscilloscope_mode_maximum, rotary_encoder_a_oscilloscope_mode__vector_table
+predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_a_done:
+predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_b:
+	tst	r5, r7, lsl #rotary_encoder_b_a__index
+	bEQ	predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_b_done
+	mov	r0, r5, lsr #rotary_encoder_b_a__index
+@	bic	r5, r7, lsl #rotary_encoder_b_a__index
+	and	r0, r0, r7
+	mov	r0, r0, lsl #30
+@		debug	r0
+	mov	r0, r0, asr #30
+	ldr	r1, =rotary_encoder_b_signed_delta_stable
+	strb	r0, [r1]
+	vectored_call	rotary_encoder_b_oscilloscope_mode_minimum, rotary_encoder_b_oscilloscope_mode, rotary_encoder_b_oscilloscope_mode_maximum, rotary_encoder_b_oscilloscope_mode__vector_table
+predicate_appropriate_button_and_rotary_encoder_changes__rotary_encoder_b_done:
+		ldr	r1, =button_and_rotary_encoder_delta
+		ldr	r0, =0
+		str	r0, [r1]
+	pop	r0-r12	@ bug/future
+	return
+
+@rotary_encoder_a_oscilloscope_mode__vector_table:
+@	b	change_horizontal_scale
+@	b	change_vertical_scale_for_trace_1
+@	b	change_vertical_offset_for_trace_1
+@	b	change_vertical_scale_for_trace_2
+@	b	change_vertical_offset_for_trace_2
+@	return
+@	return
+@	return
+
+rotary_encoder_a_oscilloscope_mode__vector_table:
+	b	change_vertical_scale_for_trace_1
+	b	change_vertical_offset_for_trace_1
+@	b	change_dac_a
+@	b	change_dac_a
+	return
+	return
+	return
+	return
+	return
+	return
+
+rotary_encoder_b_oscilloscope_mode__vector_table:
+	b	change_horizontal_scale
+	b	change_trigger_level_for_trace_1
+@	b	change_dac_c
+	return
+	return
+	return
+	return
+	return
+	return
+
+@ this vector table is ignored right now:
+button_1__vector_table:
+	b	button_1_toggle_something
+	return
+	return
+	return
+	return
+	return
+	return
+	return
+
+@	b	affect_rotary_encoder_a_change_clock_face_mode
+
+@ ============================================================================
+
+button_1_toggle_something:
+	push	r0-r12	@ bug/future
+	ldr	r0, =button_1_toggle_something_status
+	ldrb	r1, [r0]
+	cmp	r1, #0
+	bNE	button_1_toggle_something_zero
+button_1_toggle_something_one:
+	@ it was zero, but now it should be one
+	call	toggle_something_one
+	ldr	r1, =1
+	b	button_1_toggle_something_done
+button_1_toggle_something_zero:
+	@ it was one, but now it should be zero
+	call	toggle_something_zero
+	ldr	r1, =0
+button_1_toggle_something_done:
+	ldr	r0, =button_1_toggle_something_status
+	strb	r1, [r0]
+	pop	r0-r12	@ bug/future
+	return
+
+turn_on_autotrigger:
+	push	r0-r1
+	ldr	r0, =should_autotrigger
+	ldr	r1, =1
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+turn_off_autotrigger:
+	push	r0-r1
+	ldr	r0, =should_autotrigger
+	ldr	r1, =0
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+toggle_something_zero:
+	push	r0-r12	@ bug/future
+@	call	turn_off_plus_and_minus_5V_supplies
+@	call	turn_off_2.5V_supply
+	call	turn_off_autotrigger
+	pop	r0-r12	@ bug/future
+	return
+
+toggle_something_one:
+	push	r0-r12	@ bug/future
+@	call	turn_on_plus_and_minus_5V_supplies
+@	call	turn_on_2.5V_supply
+@	call	trigger_clear
+	call	turn_on_autotrigger
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+.ifeq	model-oscilloscoperev00
+turn_on_Vdisplay:
+	push	r0-r1
+	ldr	r0, =PIOA
+	ldr	r1, =bit00<<vdisplay_enable_port_a_bit
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	pop	r0-r1
+	return
+
+turn_off_Vdisplay:
+	push	r0-r1
+	ldr	r0, =PIOA
+	ldr	r1, =bit00<<vdisplay_enable_port_a_bit
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	pop	r0-r1
+	return
+.endif
+
+turn_on_2.5V_supply:
+	push	r0-r1
+	ldr	r0, =PIOA
+	ldr	r1, =bit00<<enable_2.5V_port_a_bit
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	pop	r0-r1
+	return
+
+turn_off_2.5V_supply:
+	push	r0-r1
+	ldr	r0, =PIOA
+	ldr	r1, =bit00<<enable_2.5V_port_a_bit
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	pop	r0-r1
+	return
+
+@ ============================================================================
+

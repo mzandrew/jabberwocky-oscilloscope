@@ -1,0 +1,261 @@
+
+.ifdef	onboard_oscilloscope_available
+initialize_arm7_for_onboard_oscilloscope_functionality:
+	push	r0-r12	@ bug/future
+	@ most of the following functions are misnamed - trigger->sample
+	call	setup_adc_for_onboard_oscilloscope
+	call	setup_timer_counter_channel_for_onboard_oscilloscope
+	call	set_onboard_oscilloscope_sampling_period_from_horizontal_scale_setting
+@	call	disable_onboard_oscilloscope_trigger_clock
+	call	enable_onboard_oscilloscope_trigger_clock
+	call	trigger_onboard_oscilloscope_trigger_clock
+@	call	setup_buffer_for_onboard_oscilloscope_DMA
+@	ldr	r0, =ADC
+@	ldr	r1, =0b10
+@	str	r1, [r0, #ADC_Control_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+setup_adc_for_onboard_oscilloscope:
+	push	r0-r12	@ bug/future
+@	ldr	r1, =master_clock_frequency
+	ldr	r0, =ADC
+	ldr	r1, =0xff
+	str	r1, [r0, #ADC_Channel_Disable_Register_offset]
+	ldr	r1, =0
+	@ select which channels to sample:
+@		orr	r1, r1, #bit00<<4
+	.ifeq	model-prototypeoscilloscope
+		orr	r1, r1, #bit00<<5
+@		orr	r1, r1, #bit00<<6
+	.else
+		.ifeq	model-oscilloscoperev00
+			orr	r1, r1, #bit00<<2
+		.endif
+	.endif
+	str	r1, [r0, #ADC_Channel_Enable_Register_offset]
+	ldr	r1, =bit00
+	ldr	r2, =0
+	orr	r2, r2, r1, lsl #0	@ TRGEN = enable triggers
+	.ifeq	adc_number_of_bits-8
+		orr	r2, r2, r1, lsl #4	@ 8 bit mode
+	.endif
+	@ see electronics notebook, page 116 for calculations
+	@ this is valid for a 60MHz master clock
+	@ this is also done in the function setup_adc
+	@ but this gets done last (it is called from initialize_arm7_for_onboard_oscilloscope)
+	@ so it is this one here that affects normal operation
+	@
+	@ adcclock = mck/[2*(prescal+1)]
+	@ which must be no faster than 8MHz for 8bit operation
+	@ or no faster than 5MHz for 10bit operation
+	@ a prescal of 3 at 60.15625MHz gives and adcclock of 7.51953125MHz
+	@ a prescal of 3 at 30.078125Hz gives and adcclock of 3.759765625MHz
+	ldr	r1, =3 @ prescal
+	orr	r2, r2, r1, lsl #8 @ bit position of prescal
+	@
+	@ startup time = 8(startup+1)/adcclock
+	@ which needs at most 20us
+	@ which means we need to provide at least 20us startup time
+	@ a startup of 18 with a adcclock of 7.51953125MHz gives a startup time of 20.124us
+	@ a startup of 18 with a adcclock of 3.759765625MHz gives a startup time of 40.248us
+	ldr	r1, =18 @ startup
+	orr	r2, r2, r1, lsl #16 @ bit position of startup
+	@
+	@ sample & hold time = (shtim+1)/adcclock
+	@ which is 600ns minimum
+	@ which means we need to provide at least that
+	@ a shtim of 4 with an adcclock of 7.51953125MHz provides 664.9ns
+	@ a shtim of 4 with an adcclock of 3.759765625MHz provides 1329.8ns
+	ldr	r1, =4 @ shtim
+	orr	r2, r2, r1, lsl #24 @ bit position of shtim
+	@
+	str	r2, [r0, #ADC_Mode_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division:
+	push	r0-r3
+	@ 1 sample per pixel
+	@ 100 = period of timer/counter in nanoseconds, for a MCK of 20MHz
+	@ 12 = number of pixels per division
+	@ desired_seconds_per_division = number of seconds per division (determined from the horizontal scale)
+	@ clocks_per_sample = desired_seconds_per_div / ( seconds_per_counter_clock * pixels_per_div * samples_per_pixel)
+	@ seconds_per_counter_clock = 2 divided by master_clock_frequency
+	@ dividing by 2/mck_period is the same as multiplying by mck_freq/2
+	@ the factor of 2 is because the timer/counter can't do anything faster than mck_freq/2
+	ldr	r0, =master_clock_frequency
+	ldr	r0, [r0]
+@		debug	r0 @ 01caf4adh = 30MHz
+	mov	r0, r0, lsr #log_base_2_of_number_of_samples_per_displayed_point
+	mov	r0, r0, lsr #1 @ divide by 2
+	call	convert_32bit_to_32bit_fl
+@		debug	r0 @ e57a5600h
+@		debug	r1 @ fffffff8h
+	mov	r2, r0
+	mov	r3, r1
+	@ divide by 12 pixels per division
+	@ bug/future:  this 12 is hardcoded (and from HP48 program "arm7"/"div" - see notebook page 83)
+@	ldr	r0, =0
+@	orr	r0, r0, #bit00<<28
+@	orr	r0, r0, #bit00<<26
+@	orr	r0, r0, #bit00<<24
+@	orr	r0, r0, #bit00<<22
+@	orr	r0, r0, #bit00<<20
+@	orr	r0, r0, #bit00<<18
+@	ldr	r1, =-32
+	ldr	r0, =0x55555554
+	ldr	r1, =-34
+@		debug	r0 @ 15540000h
+@		debug	r1 @ ffffffe0h
+	call	convert_32bit_fl_to_32bit_fl
+@		debug	r0 @ aaa00000h
+@		debug	r1 @ ffffffddh
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+		@ should be (if it were an integer) 131e55h = 1.25M
+@		debug	r0 @ 98f2a991h
+@		debug	r1 @ fffffff5h
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+@		debug	r0 @ 0051eb85h = 5ms * 2^-30
+	call	convert_double_precision_fixed_point_to_32bit_fl
+@		debug	r0 @ a3d70a00h
+@		debug	r1 @ ffffffd9h
+	@ r0 = mantissa of double_precision_fixed_point_seconds_per_division (0051eb85h = 5ms)
+	@    = mck_freq/[2(hardwired limit to t/c relative to mck)*12(pixels_per_div)]
+	@ r1 = exponent of r0
+	@ r2 = ~ mantissa of master_clock_frequency / 24
+	@ r3 = exponent of r2
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+@		debug	r0 @ c3c5f77ah
+@		debug	r1 @ ffffffedh
+	call	convert_32bit_fl_to_32bit
+@		debug	r0 @ 00001878h
+	@ r0 = counter_clocks_per_sample = seconds_per_division * mck_freq / 24
+	@    = 6264 for 30.078125MHz and ~5ms
+	@ should be = 6266.28d for 30.078125MHz and 5ms
+	ldr	r1, =period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks
+	str	r0, [r1]
+	pop	r0-r3
+	return
+
+setup_timer_counter_channel_for_onboard_oscilloscope:
+	push	r0-r12	@ bug/future
+	ldr	r0, =period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks
+	ldr	r0, [r0]
+	ldr	r1, =0xffff	@ it's a 16 bit counter
+	@ see register c setup
+	@ in function set_onboard_oscilloscope_sampling_period_from_horizontal_scale_setting
+	@ for a 60MHz clock,
+	@ this shouldn't need to divide by more than 2^2 for a 100ms maximum time per division
+	@ unless there's more than one sample per displayed datapoint
+	ldr	r2, =0
+	cmp	r0, r1
+	movHI	r0, r0, lsr #2
+	addHI	r2, r2, #1
+	cmp	r0, r1
+	movHI	r0, r0, lsr #2
+	addHI	r2, r2, #1
+	cmp	r0, r1
+	movHI	r0, r0, lsr #2
+	addHI	r2, r2, #1
+	cmp	r0, r1
+	movHI	r0, r0, lsr #3
+	addHI	r2, r2, #1
+	@ r2 = 0b000 (if it was shifted 0 bits)
+	@ r2 = 0b001 (if it was shifted 2 bits)
+	@ r2 = 0b010 (if it was shifted 4 bits)
+	@ r2 = 0b011 (if it was shifted 6 bits)
+	@ r2 = 0b100 (if it was shifted 9 bits)
+@	ldrLS	r2, =0b000	@ select timer_clock1 = master clock / 2^1
+@@	ldrHI	r2, =0b001	@ select timer_clock2 = master clock / 2^3
+@	ldrHI	r2, =0b010	@ select timer_clock3 = master clock / 2^5
+@@	ldrHI	r2, =0b011	@ select timer_clock4 = master clock / 2^7
+@@	ldrHI	r2, =0b100	@ select timer_clock5 = master clock / 2^10
+	orr	r2, r2, #1<<15	@ enable waveform mode
+	ldr	r3, =0b10	@ select UP mode with automatic retrigger
+	orr	r2, r2, r3, lsl #13
+	ldr	r3, =0b01	@ TIOA goes high when counter matches RA
+	orr	r2, r2, r3, lsl #16	@ TIOA register A match
+	ldr	r3, =0b10	@ TIOA goes low when the counter matches RC
+	orr	r2, r2, r3, lsl #18	@ TIOA register C match
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+set_onboard_oscilloscope_sampling_period_from_horizontal_scale_setting:
+	push	r0-r2
+@		call	disable_onboard_oscilloscope_trigger_clock
+	call	determine_time_per_division_from_horizontal_scale_setting
+	call	determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =1
+	str	r1, [r0, #TC_Channel_Register_A_offset]
+	str	r1, [r0, #TC_Channel_Register_B_offset]
+	ldr	r1, =period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks
+	ldr	r1, [r1]
+	ldr	r2, =0xffff	@ it's a 16 bit counter
+	cmp	r1, r2
+	movHI	r1, r1, lsr #2
+	cmp	r1, r2
+	movHI	r1, r1, lsr #2
+	cmp	r1, r2
+	movHI	r1, r1, lsr #2
+	cmp	r1, r2
+	movHI	r1, r1, lsr #3
+	@ r1 is now shifted by 2, 4, 6 or 9 bits so that it'll fit in 16 bits
+@@	movHI	r1, r1, lsr #6 @ (6 = 7 - 1)
+@	movHI	r1, r1, lsr #4 @ (4 = 5 - 1)
+@@	movHI	r1, r1, lsr #2 @ (2 = 3 - 1)
+	@ see timer/counter clock divisor setup
+	@ in function setup_timer_counter_channel_for_onboard_oscilloscope
+	cmp	r1, #1
+	ldrLS	r1, =2	@ must be > register a or tioa never changes
+@		debug_if_changed	r1
+	str	r1, [r0, #TC_Channel_Register_C_offset]
+	call	setup_timer_counter_channel_for_onboard_oscilloscope
+@		call	enable_onboard_oscilloscope_trigger_clock
+	pop	r0-r2
+	return
+
+enable_onboard_oscilloscope_trigger_clock:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<0	@ enable this clock
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r1
+	return
+
+disable_onboard_oscilloscope_trigger_clock:
+	push	r0-r1
+	ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+	ldr	r1, =0
+	eor	r1, r1, #bit00<<0	@ disable this clock
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r1
+	return
+
+setup_buffer_for_onboard_oscilloscope_DMA:
+	push	r0-r2
+	ldr	r0, =ADC
+	ldr	r1, =beginning_of_buffer_for_onboard_oscilloscope_data
+	str	r1, [r0, #PDC_Receive_Pointer_Register_offset]
+	ldr	r1, =number_of_datapoints_in_a_displayed_trace
+	mov	r1, r1, lsl #log_base_2_of_number_of_samples_per_displayed_point
+@		ldr	r1, =16
+	str	r1, [r0, #PDC_Receive_Counter_Register_offset]
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ RXTEN
+@	add	r2, r2, r1, lsl #0	@ RXTDIS
+@	add	r2, r2, r1, lsl #0	@ TXTEN
+@	add	r2, r2, r1, lsl #0	@ TXTDIS
+	str	r2, [r0, #PDC_Transfer_Control_Register_offset]
+	pop	r0-r2
+	return
+.endif
+

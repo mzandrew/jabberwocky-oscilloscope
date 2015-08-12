@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+declare base_dir="$(dirname $0)/.."
+declare script_dir="${base_dir}/scripts"
+declare source_dir="${base_dir}/src"
+
+#grep -r '^[^@]*call' ${source_dir}/* | sed -e "s,\([^: ]\+\):[@\t ]\+call[\t ]\+\([^: \t]\+\).*,\2," | sort -u
+#${script_dir}/cat_all_source_files -h --no-comments | sed -e "s,[\t ]\+call[\t ]\+\([^ \t]\+\).*,\1,"
+${script_dir}/cat_all_source_files -h --no-comments | grep call | sed -e "s,^\([\t ]\+call[\t ]\+\)\([^\t ]\+\).*,\2," | grep -v 'vectored_call\|call_register\|\.macro' | sort -u
+#${script_dir}/cat_all_source_files -h
+

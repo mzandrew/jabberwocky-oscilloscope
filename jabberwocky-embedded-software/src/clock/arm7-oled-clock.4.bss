@@ -1,0 +1,4 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+clock_variable:	.word 0
+

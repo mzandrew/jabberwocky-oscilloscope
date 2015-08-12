@@ -1,0 +1,19 @@
+@ trigger_delay__trigger_b__TCLK trigger_delay__trigger_a__TCLK trigger_delay__rco__TCLK
+
+.macro	autotrigger_the_labrador3
+	ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+@ bug/future: these need to be separated so that the swtrig clears TIOA but leaves the clock disabled so that the external event can be the actual timing trigger
+	add	r2, r2, r1, lsl #2	@ SWTRIG = trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+.endm
+
+.macro	force_trigger_on_the_second_part_of_the_trigger_delay
+	ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #2	@ trigger this clock to reset and start counting
+	str	r2, [r0, #TC_Channel_Control_Register_offset]
+.endm
+

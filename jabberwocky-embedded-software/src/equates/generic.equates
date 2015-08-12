@@ -1,0 +1,107 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+@ This program is free software; you can redistribute it and/or modify
+@ it under the terms of the GNU General Public License as published by
+@ the Free Software Foundation; either version 3 of the License, or
+@ (at your option) any later version.
+
+@ This program is distributed in the hope that it will be useful,
+@ but WITHOUT ANY WARRANTY; without even the implied warranty of
+@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+@ GNU General Public License for more details.
+
+@ You should have received a copy of the GNU General Public License
+@ along with this program; if not, write to the Free Software
+@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+@ or visit http://www.fsf.org/
+
+.set bit00, 0b1
+
+.set	mydelay, 20
+
+.ifeq	model-clockrev00
+	.set	samfamily, at91sam7s
+	.set	function, clock
+.endif
+
+.ifeq	model-prototypeclock
+	.set	samfamily, at91sam7s
+	.set	function, clock
+.endif
+
+.ifeq	model-prototypeoscilloscope
+	.set	samfamily, at91sam7s
+	.set	function, oscilloscope
+.endif
+
+.ifeq	model-oscilloscoperev00
+	.set	samfamily, at91sam7a3
+	.set	function, oscilloscope
+.endif
+
+.ifeq	function-oscilloscope
+	.set	need_sine_and_cosine_lookup_table, 0
+.endif
+
+.ifeq	function-clock
+	.set	need_sine_and_cosine_lookup_table, 1
+.endif
+
+.ifne	need_sine_and_cosine_lookup_table
+	.set	sine_and_cosine_lookup_table_available, 1
+.else
+	.set	sine_and_cosine_lookup_table_available, 0
+.endif
+
+.ifeq	samfamily-at91sam7s
+	.set	TWI_peripheral_number, 9
+	.set	SPI_peripheral_number, 5
+	.set	TC0_peripheral_number, 12
+	.set	TC1_peripheral_number, 13
+	.set	TC2_peripheral_number, 14
+	.set	PIOA_peripheral_number, 2
+	.set	need_PIOA, 1
+	.set	need_PIOB, 0
+	.set	TWI_data_port_a_bit_number, 3				@ TWD = peripheral a on port a - this conflicts
+	.set	TWI_clock_port_a_bit_number, 4				@ TWCK = peripheral a on port a - this conflicts
+	.set	shutdown_controller_available, 0
+	.set	parallel_io_port_b_available, 0
+.endif
+
+.ifeq	samfamily-at91sam7a3
+	.set	TWI_peripheral_number, 10
+	.set	TC0_peripheral_number, 15
+	.set	TC1_peripheral_number, 16
+	.set	TC2_peripheral_number, 17
+	.set	TC3_peripheral_number, 18
+	.set	TC4_peripheral_number, 19
+	.set	TC5_peripheral_number, 20
+	.set	TC6_peripheral_number, 21
+	.set	TC7_peripheral_number, 22
+	.set	TC8_peripheral_number, 23
+	.set	PIOA_peripheral_number, 2
+	.set	PIOB_peripheral_number, 3
+	.set	need_PIOA, 1
+	.set	need_PIOB, 1
+	.set	TWI_data_port_a_bit_number, 0				@ TWD = peripheral a on port a
+	.set	TWI_clock_port_a_bit_number, 1				@ TWCK = peripheral a on port a
+	.set	shutdown_controller_available, 1
+	.set	parallel_io_port_b_available, 1
+.endif
+
+.if	mode & use_TC2_for_millisecond_delays
+	.set	millisecond_delays_available, 1
+.endif
+
+.ifndef	millisecond_delays_available
+	.warning "no millisecond delay functionality is available - button debouncing likely won't work"
+.endif
+
+@.set	adc_number_of_bits, 10
+.set	adc_number_of_bits, 8
+
+.if	use_pll & use_rc_clock_only
+	.error "trying to use the pll and the rc clock at the same time"
+.endif
+

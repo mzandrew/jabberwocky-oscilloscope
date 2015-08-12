@@ -1,0 +1,235 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+oscilloscope_once_a_millisecond:
+	push	r0-r12 @ bug/future
+@@	call	set_display_brightness_based_on_ambient_light_level
+@	call	oscilloscope_once_a_millisecond__add_phase
+	call	check_trigger_or_autotrigger
+	call	oscilloscope_once_a_millisecond__redraw_screen_if_necessary
+	call	oscilloscope_once_a_millisecond__draw_supplementary_info_if_necessary
+	call	clear_flag__display_needs_redrawing
+	pop	r0-r12 @ bug/future
+	return
+
+check_trigger_or_autotrigger:
+	push	r0
+	ldr	r0, =should_autotrigger
+	ldrb	r0, [r0]
+	cmp	r0, #0
+	bNE	oscilloscope_once_a_millisecond__autotrigger
+oscilloscope_once_a_millisecond__trigger:
+	call	check_trigger_and_if_necessary_get_data
+	b	oscilloscope_once_a_millisecond__next
+oscilloscope_once_a_millisecond__autotrigger:
+	call	check_autotrigger_and_if_necessary_get_data
+oscilloscope_once_a_millisecond__next:
+	pop	r0
+	return
+
+check_trigger_and_if_necessary_get_data:
+	push	r0-r12
+		call	trigger_clear
+		ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+		ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+@		debug_if_changed	r1
+@		ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+@		ldr	r1, [r0, #TC_Channel_Mode_Register_offset]
+@		debug_if_changed	r1
+	.ifc	asdf,asd
+		ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+		ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+		ldr	r2, =bit00<<7 @ external trigger
+		tst	r1, r2
+		bEQ check_trigger_and_if_necessary_get_data__done
+	.else
+		ldr	r0, =PIOB
+		ldr	r1, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+		@ bug/future:  this is channel a specific:
+		ldr	r2, =bit00<<trigger_delay__trigger_a__port_b_bit_number
+		tst	r1, r2
+		bEQ check_trigger_and_if_necessary_get_data__done
+@		call	debug_TC0
+@		call	debug_PIOB
+	.endif
+	.ifdef trigger_delay_available
+@			call	read_the_status_register_for_the_first_part_of_the_trigger_delay
+@			call	read_the_status_register_for_the_second_part_of_the_trigger_delay
+@			autotrigger_the_labrador3
+		call	wait_for_the_end_of_the_first_part_of_the_trigger_delay
+@			call	decrement_trigger_a_level
+		call	wait_for_the_end_of_the_grey_code_clock
+@			call	decrement_trigger_a_level
+		call	acquire_data_from_lab3
+		call	setup_for_next_trigger
+	.endif
+	call	set_flag__display_needs_redrawing
+check_trigger_and_if_necessary_get_data__done:
+	pop	r0-r12
+	return
+
+check_autotrigger_and_if_necessary_get_data:
+	push	r0-r12 @ bug/future
+	ldr	r0, =autotrigger_current_number_of_milliseconds_remaining_until_forcing_a_recapture_and_redraw
+	ldr	r1, [r0]
+	ldr	r2, =how_many_millisecond_periods_we_missed
+	ldr	r2, [r2]
+	subS	r1, r1, r2
+@	cmp	r1, #0
+	ldrLE	r1, =autotrigger_maximum_delay
+	str	r1, [r0]
+	bGT	done_checking_autotrigger
+need_an_autotrigger:
+	ldr	r0, =currently_retrieving_data_so_do_not_autotrigger
+	ldrb	r1, [r0]
+	cmp	r1, #0
+	bNE	done_checking_autotrigger
+	ldr	r1, =1
+@@	strb	r1, [r0]
+	.ifdef	onboard_oscilloscope_available
+		call	autotrigger_onboard_oscilloscope @ this does not actually autotrigger it
+@		call	disable_onboard_oscilloscope_trigger_clock
+		call	set_onboard_oscilloscope_sampling_period_from_horizontal_scale_setting
+@		call	enable_onboard_oscilloscope_trigger_clock
+	.endif
+	.ifdef trigger_delay_available
+@		call	initialize_arm7_for_oscilloscope_and_initialize_oscilloscope
+@		debug_timer_counter_counter_register_values
+		call	read_the_status_register_for_the_first_part_of_the_trigger_delay
+		call	read_the_status_register_for_the_second_part_of_the_trigger_delay
+		autotrigger_the_labrador3
+		call	wait_for_the_end_of_the_first_part_of_the_trigger_delay
+		call	wait_for_the_end_of_the_grey_code_clock
+		call	acquire_data_from_lab3
+		call	setup_for_next_trigger
+	.endif
+	call	set_flag__display_needs_redrawing
+done_checking_autotrigger:
+	pop	r0-r12 @ bug/future
+	return
+
+oscilloscope_once_a_millisecond__redraw_screen_if_necessary:
+	push	r0-r12 @ bug/future
+		ldr	r0, =display_needs_redrawing
+		ldrb	r1, [r0]
+		@ r1 = 1 just after changing trigger level
+		@ r1 = 1 just after changing vertical or horizontal scale
+		@ r1 = 1 just after adding some phase to the fake trace, above (obsolete)
+		cmp	r1, #0
+		bEQ	oscilloscope_once_a_millisecond__do_not_redraw_screen
+@		ldr	r1, =0
+@		strb	r1, [r0]
+oscilloscope_once_a_millisecond__redraw_screen:
+@		call	pulse_general_purpose_output_c
+		.ifdef	onboard_oscilloscope_available
+			call	check_whether_onboard_oscilloscope_has_finished_aquiring_data
+			ldr	r0, =currently_retrieving_data_so_do_not_autotrigger
+			ldrb	r0, [r0]
+			cmp	r0, #0
+			bNE	oscilloscope_once_a_millisecond__do_not_redraw_screen
+		.endif
+		.ifc	aslg,alg
+			.ifdef	onboard_oscilloscope_available
+				save_state_of_onboard_oscilloscope
+			.endif
+			call	get_battery_voltage__carefully
+			call	get_display_voltage__carefully
+			call	get_vbus_voltage__carefully
+			call	get_vout_current__carefully
+			call	get_3.3V_current__carefully
+			call	get_2.5V_current__carefully
+			call	get_display_current__carefully
+			.ifdef	onboard_oscilloscope_available
+				restore_state_of_onboard_oscilloscope
+			.endif
+		.endif
+		.ifc	abd,abd2
+			@ draw the grid, then erase and redraw each trace independently
+			call	draw_a_grid
+			call	erase_trace_1
+			call	draw_trace_1
+			call	erase_trace_2
+			.ifne	sine_and_cosine_lookup_table_available
+				call	make_a_multifrequency_trace_2
+			.endif
+			call	draw_trace_2
+		.else
+			@ erase the two traces, draw the grid and then draw the two back
+@			call	wait_for_onboard_oscilloscope_to_finish_aquiring_data
+			call	erase_trace_1
+@			call	erase_trace_2
+			call	erase_trigger_line_for_trace_1
+			call	draw_a_grid
+			.ifdef	onboard_oscilloscope_available
+				call	copy_onboard_oscilloscope_buffer_to_trace_1_buffer
+			.else
+				call	take_raw_lab3_data_and_reorder_it_based_on_hitbus_position
+				call	take_lab3_data_and_invert_and_offset_and_scale_it
+@				call	take_lab3_data_and_convert_it_to_signed_fixed_point_values
+@				call	calculate_average_value_from_lab3_data
+				call	copy_lab3_channel_a_buffer_to_trace_1_buffer
+			.endif
+			call	draw_trace_1
+			call	draw_trigger_line_for_trace_1
+			.ifne	sine_and_cosine_lookup_table_available
+@				call	make_a_multifrequency_trace_2
+			.endif
+@			call	draw_trace_2
+		.endif
+oscilloscope_once_a_millisecond__do_not_redraw_screen:
+	pop	r0-r12 @ bug/future
+	return
+
+oscilloscope_once_a_millisecond__draw_supplementary_info_if_necessary:
+	push	r0-r12 @ bug/future
+	ldr	r0, =display_needs_redrawing
+	ldrb	r1, [r0]
+	cmp	r1, #0
+	bEQ	oscilloscope_once_a_millisecond__do_not_draw_supplementary_info
+@	ldr	r1, =0
+@	strb	r1, [r0]
+	call	draw_supplementary_info
+oscilloscope_once_a_millisecond__do_not_draw_supplementary_info:
+	pop	r0-r12 @ bug/future
+	return
+
+oscilloscope_once_a_millisecond__add_phase:
+	push	r0-r12 @ bug/future
+		ldr	r0, =phase_add_counter
+		ldr	r1, [r0]
+		ldr	r2, =how_many_millisecond_periods_we_missed
+		ldr	r2, [r2]
+		sub	r1, r1, r2
+		str	r1, [r0]
+		cmp	r1, #0
+		bGT	oscilloscope_once_a_millisecond__no_add_phase
+		ldr	r1, =phase_add_count
+		str	r1, [r0]
+		ldr	r0, =phase_of_trace_2
+		ldrb	r1, [r0]
+		add	r1, r1, #phase_add_amount
+		strb	r1, [r0]
+@		ldr	r1, =1
+@		ldr	r0, =display_needs_redrawing
+@		strb	r1, [r0]
+oscilloscope_once_a_millisecond__no_add_phase:
+	pop	r0-r12 @ bug/future
+	return
+
+clear_flag__display_needs_redrawing:
+	push	r0-r1
+	ldr	r1, =0
+	ldr	r0, =display_needs_redrawing
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+set_flag__display_needs_redrawing:
+	push	r0-r1
+	ldr	r1, =1
+	ldr	r0, =display_needs_redrawing
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+

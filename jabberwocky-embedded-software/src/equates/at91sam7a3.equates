@@ -1,0 +1,14 @@
+@ AT91SAM7A3 ARMv4T ARM7TDMI
+
+@ my definition of "top" is the highest address; atmel's and arm's might be different
+.set	size_of_sram, 0x8000
+.set	bottom_of_sram, 0x200000
+.set	top_of_sram, bottom_of_sram + size_of_sram - 1
+.set	top_of_stack, top_of_sram-3	@ the 3 is to align it to a 4 byte boundary
+
+.set	PIOB, 0xfffff600
+
+.set	SHDW, 0xfffffd10
+.set	SHDW_Control_Register_offset, 0x00
+.set	SHDW_Mode_Register_offset, 0x04
+

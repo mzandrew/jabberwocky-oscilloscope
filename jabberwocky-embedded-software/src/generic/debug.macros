@@ -1,0 +1,24 @@
+
+.macro	debug_timer_counter_counter_register_values
+@		ldr	r0, =0x88880000
+@		debug	r0
+		ldr	r0, =timer_counter_channel_to_use_for_first_part_of_trigger_delay
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Channel_Mode_Register_offset]
+@		debug	r1
+		ldr	r0, =timer_counter_channel_to_use_for_second_part_of_trigger_delay
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Channel_Status_Register_offset]
+@		debug	r1
+		ldr	r1, [r0, #TC_Channel_Mode_Register_offset]
+@		debug	r1
+.endm
+

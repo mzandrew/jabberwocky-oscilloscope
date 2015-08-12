@@ -1,0 +1,248 @@
+let SessionLoad = 1
+if &cp | set nocp | endif
+let s:cpo_save=&cpo
+set cpo&vim
+map! <S-Insert> <MiddleMouse>
+nmap gx <Plug>NetrwBrowseX
+nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetBrowseX(expand("<cWORD>"),0)
+map <S-Insert> <MiddleMouse>
+let &cpo=s:cpo_save
+unlet s:cpo_save
+set backspace=indent,eol,start
+set directory=~/.vimtmpswp/
+set fileencodings=ucs-bom,utf-8,default,latin1
+set helplang=en
+set history=50
+set iminsert=0
+set imsearch=0
+set makeef=work/output-from-make
+set nomodeline
+set mouse=a
+set printoptions=paper:a4
+set ruler
+set runtimepath=~/.vim,/var/lib/vim/addons,/usr/share/vim/vimfiles,/usr/share/vim/vim71,/usr/share/vim/vimfiles/after,/var/lib/vim/addons/after,~/.vim/after
+set selectmode=mouse
+set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc
+set swapsync=
+set tabstop=4
+set termencoding=utf-8
+set viminfo='20,\"50
+set window=18
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+cd ~/documents/software/jabberwocky
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-01-27-homework.tex
+badd +17 ~/documents/university/physics/src/thermodynamics-2009-02-03-homework.tex
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-01-20-homework.tex
+badd +45 ~/documents/university/physics/src/thermodynamics-2009-02-17-homework.tex
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-02-24-homework.tex
+badd +32 /home/bin/nofizbin/latex/math-generic.tex
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-03-03-homework.tex
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-03-10-homework.tex
+badd +125 src/jabberwocky.armasm
+badd +192 src/main-loop
+badd +23 src/oled-display/oled-display.functions
+badd +438 src/oled-display-clock.functions
+badd +5 src/oled-display-oscilloscope.functions
+badd +1 src/equates/arm7-oled-clock.equates
+badd +43 src/initialization/initialization.functions
+badd +82 src/oscilloscope/jabberwocky.functions
+badd +1 src/clock/spi-rtc.functions
+badd +45 src/generic/io-pin.functions
+badd +47 src/equates/user-modifiable.equates
+badd +150 src/equates/math.equates
+badd +333 src/equates/jabberwocky.equates
+badd +24 src/equates/unique-numbers.equates
+badd +85 src/equates/generic.equates
+badd +2 src/equates/at91sam7a3.equates
+badd +34 src/generic/math.functions
+badd +22 src/equates/oled-display.equates
+badd +1 src/oscilloscope/jabberwocky.1.data
+badd +183 src/initialization/initialization.macros
+badd +1 src/oscilloscope/jabberwocky-oled-display.macros
+badd +186 src/generic/io-pin.macros
+badd +1 src/generic/rotary-encoder.macros
+badd +3 src/generic/debug.globals
+badd +24 src/arm7-oled-clock.bss
+badd +22 src/generic/debug.macros
+badd +15 src/initialization/reset-vector
+badd +584 src/generic/generic.macros
+badd +48 src/test.c
+badd +139 makefile
+badd +142 scripts/build-toolchain
+badd +126 src/oscilloscope/jabberwocky.4.bss
+badd +1 src/i2c/i2c.macros
+badd +38 src/oscilloscope/jabberwocky-i2c.macros
+badd +1 src/oscilloscope/jabberwocky-test-code.macros
+badd +24 src/oled-display/oled-display-test-code.macros
+badd +7 todo
+badd +38 src/oscilloscope/jabberwocky.1.bss
+badd +17 src/initialization/jabberwocky-initialization.functions
+badd +1 src/oled-display/oled-display.macros
+badd +7 src/oscilloscope/jabberwocky.macros
+badd +342 src/generic/generic.functions
+badd +131 src/equates/at91sam7.equates
+badd +31 src/generic/miscellaneous.4.bss
+badd +1 scripts/udev-rule
+badd +35 src/oled-display/oled-display-initialization.macros
+badd +101 src/oled-display/oled-display-low-level.macros
+badd +147 src/oscilloscope/jabberwocky-main-loop.functions
+badd +2 src/oscilloscope/jabberwocky-onboard-oscilloscope.macros
+badd +45 src/oscilloscope/jabberwocky-onboard-oscilloscope.functions
+badd +4 src/oscilloscope/jabberwocky-oled-display.functions
+badd +173 src/oled-display/font.lookup-table
+badd +290 src/oscilloscope/jabberwocky-io-pin.functions
+badd +1 src/equates/at91sam7s64.equates
+badd +28 src/oled-display/oled-display-high-level.macros
+badd +192 src/clock/arm7-oled-clock.functions
+badd +1 src/clock/arm7-oled-clock-initialization.functions
+badd +310 src/initialization/initialize-clocks-and-timers.macros
+badd +93 src/initialization/initialize-io-lines.macros
+badd +43 src/i2c/i2c-initialization.macros
+badd +287 src/i2c/i2c-low-level.functions
+badd +353 src/i2c/i2c-high-level.functions
+badd +8 notes/todo
+badd +10 src/oscilloscope/jabberwocky-analog-to-digital-converter.functions
+badd +59 src/oscilloscope/jabberwocky.4.data
+badd +1 ~/documents/university/physics/src/thermodynamics-2009-04-07-homework.tex
+badd +1 src/generic/analog-to-digital-converter.macros
+badd +128 src/generic/button-and-rotary-encoder.functions
+badd +1 src/generic/button-and-rotary-encoders.functions
+badd +1 src/oscilloscope/jabberwocky-io-pin-initialization.functions
+badd +1 src/generic/miscellaneous.1.data
+badd +1 src/oscilloscope/labrador3.functions
+badd +1 notes/notes
+badd +128 src/oscilloscope/trigger-delay.functions
+badd +259 src/oscilloscope/jabberwocky-onboard-oscilloscope-initialization.functions
+badd +1 src/initialization/CAL-output-initialization.functions
+badd +1 junk/dead-code
+badd +1 src/generic/debug.functions
+silent! argdel *
+edit src/oscilloscope/jabberwocky.functions
+set splitbelow splitright
+set nosplitbelow
+set nosplitright
+wincmd t
+set winheight=1 winwidth=1
+argglobal
+setlocal keymap=
+setlocal noarabic
+setlocal noautoindent
+setlocal balloonexpr=
+setlocal nobinary
+setlocal bufhidden=
+setlocal buflisted
+setlocal buftype=
+setlocal nocindent
+setlocal cinkeys=0{,0},0),:,0#,!^F,o,O,e
+setlocal cinoptions=
+setlocal cinwords=if,else,while,do,for,switch
+setlocal comments=s1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-
+setlocal commentstring=/*%s*/
+setlocal complete=.,w,b,u,t,i
+setlocal completefunc=
+setlocal nocopyindent
+setlocal nocursorcolumn
+setlocal nocursorline
+setlocal define=
+setlocal dictionary=
+setlocal nodiff
+setlocal equalprg=
+setlocal errorformat=
+setlocal noexpandtab
+if &filetype != ''
+setlocal filetype=
+endif
+setlocal foldcolumn=0
+setlocal foldenable
+setlocal foldexpr=0
+setlocal foldignore=#
+setlocal foldlevel=0
+setlocal foldmarker={{{,}}}
+setlocal foldmethod=manual
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldtext=foldtext()
+setlocal formatexpr=
+setlocal formatoptions=tcq
+setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
+setlocal grepprg=
+setlocal iminsert=0
+setlocal imsearch=0
+setlocal include=
+setlocal includeexpr=
+setlocal indentexpr=
+setlocal indentkeys=0{,0},:,0#,!^F,o,O,e
+setlocal noinfercase
+setlocal iskeyword=@,48-57,_,192-255
+setlocal keywordprg=
+setlocal nolinebreak
+setlocal nolisp
+setlocal nolist
+setlocal makeprg=
+setlocal matchpairs=(:),{:},[:]
+setlocal nomodeline
+setlocal modifiable
+setlocal nrformats=octal,hex
+set number
+setlocal number
+setlocal numberwidth=4
+setlocal omnifunc=
+setlocal path=
+setlocal nopreserveindent
+setlocal nopreviewwindow
+setlocal quoteescape=\\
+setlocal noreadonly
+setlocal norightleft
+setlocal rightleftcmd=search
+setlocal noscrollbind
+setlocal shiftwidth=8
+setlocal noshortname
+setlocal nosmartindent
+setlocal softtabstop=0
+setlocal nospell
+setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
+setlocal spellfile=
+setlocal spelllang=en
+setlocal statusline=
+setlocal suffixesadd=
+setlocal swapfile
+setlocal synmaxcol=3000
+if &syntax != ''
+setlocal syntax=
+endif
+setlocal tabstop=4
+setlocal tags=
+setlocal textwidth=0
+setlocal thesaurus=
+setlocal nowinfixheight
+setlocal nowinfixwidth
+setlocal wrap
+setlocal wrapmargin=0
+silent! normal! zE
+let s:l = 74 - ((1 * winheight(0) + 9) / 18)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+74
+normal! 012l
+lcd ~/documents/software/jabberwocky
+tabnext 1
+if exists('s:wipebuf')
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 shortmess=filnxtToO
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . s:sx
+endif
+let &so = s:so_save | let &siso = s:siso_save
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :
