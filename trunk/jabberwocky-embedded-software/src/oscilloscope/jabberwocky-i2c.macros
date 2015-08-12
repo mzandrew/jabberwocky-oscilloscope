@@ -1,0 +1,44 @@
+.macro	select_input_for_i2c_analog_multiplexer_macro	input=none
+@	.ifc	\input,none
+	ldr	r0, =0
+	ldr	r1, =adc_one
+@	.endif
+	.ifc	\input,2.5V_current
+		ldr r0, =analog_2.5V_current_input_number
+		ldr r1, =analog_2.5V_current_multiplication_factor
+	.endif
+	.ifc	\input,3.3V_current
+		ldr	r0, =analog_3.3V_current_input_number
+		ldr	r1, =analog_3.3V_current_multiplication_factor
+	.endif
+	.ifc	\input,vout_current
+		ldr	r0, =analog_vout_current_input_number
+		ldr	r1, =analog_vout_current_multiplication_factor
+	.endif
+	.ifc	\input,vdisplay_current
+		ldr	r0, =analog_vdisplay_current_input_number
+		ldr r1, =analog_vdisplay_current_multiplication_factor
+	.endif
+	.ifc	\input,vdisplay_divided
+		ldr	r0, =analog_vdisplay_divided_input_number
+		ldr	r1, =analog_vdisplay_divided_multiplication_factor
+	.endif
+	.ifc	\input,ambient_light
+		ldr	r0, =analog_ambient_light_input_number
+		ldr r1, =analog_ambient_light_multiplication_factor
+	.endif
+	.ifc	\input,vbattery_divided
+		ldr	r0, =analog_vbattery_divided_input_number
+		ldr	r1, =analog_vbattery_divided_multiplication_factor
+	.endif
+	.ifc	\input,vbus_divided
+		ldr	r0, =analog_vbus_divided_input_number
+		ldr	r1, =analog_vbus_divided_multiplication_factor
+	.endif
+	ldr	r2, =currently_selected_analog_input
+	strb	r0, [r2]
+	ldr	r2, =onboard_oscilloscope_fixed_point_multiplication_factor
+	str	r1, [r2]
+	call	select_input_for_i2c_analog_multiplexer
+.endm
+	

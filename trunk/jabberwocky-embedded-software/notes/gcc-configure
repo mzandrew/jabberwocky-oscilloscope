@@ -1,0 +1,6 @@
+apt-get install libgmp-dev
+apt-get install libmpfr-dev
+./configure --host=i686-pc-linux-gnu --program-prefix=arm-elf- --target=arm-elf --disable-threads --with-cpu=arm7tdmi --enable-languages=c
+
+gcc-4.3.3 complains that arm-elf/bin/as doesn't do -Qy
+

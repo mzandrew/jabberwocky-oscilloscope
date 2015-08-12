@@ -1,0 +1,191 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+@ This program is free software; you can redistribute it and/or modify
+@ it under the terms of the GNU General Public License as published by
+@ the Free Software Foundation; either version 3 of the License, or
+@ (at your option) any later version.
+
+@ This program is distributed in the hope that it will be useful,
+@ but WITHOUT ANY WARRANTY; without even the implied warranty of
+@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+@ GNU General Public License for more details.
+
+@ You should have received a copy of the GNU General Public License
+@ along with this program; if not, write to the Free Software
+@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+@ or visit http://www.fsf.org/
+
+@.set	initial_oled_display_master_current_value, 0x09 @ dim room
+.set	initial_oled_display_master_current_value, 0x0d @ bright room
+@.set	initial_oled_display_master_current_value, 0x0f @ very bright room
+.set	display_brightness_additive, 0x8
+.set	display_brightness_lowest_setting, 0x8
+.set	display_brightness_highest_setting, 0xf
+
+.set	default_background_color, black
+@.set	timex_background_color, 0b111110111110111110
+.set	timex_background_color, white
+
+.set	default_hour_hand_color, red
+.set	default_minute_hand_color, blue
+.set	default_second_hand_color, green
+
+.set	default_hour_hand_length, 30
+.set	default_minute_hand_length, 38
+.set	default_second_hand_length, 45
+
+.set	default_minute_hand_width, 3
+.set	default_hour_hand_width, 4
+.set	default_second_hand_width, 2
+
+.set	timex_hour_hand_length, 21
+.set	timex_minute_hand_length, 29
+.set	timex_second_hand_length, 29
+
+.set	timex_minute_hand_width, 2
+.set	timex_hour_hand_width, 2
+.set	timex_second_hand_width, 2
+
+.set	display_first_x, 0
+.set	display_first_y, 0
+.set	display_last_x, 127
+.set	display_last_y, 123
+.set	display_width_in_pixels, display_last_x - display_first_x + 1
+.set	display_height_in_pixels, display_last_y - display_first_y + 1
+.set	display_center_x, display_width_in_pixels/2 + display_first_x
+.set	display_center_y, display_height_in_pixels/2 + display_first_y
+.set	display_center_of_hands_x, display_center_x
+.set	display_center_of_hands_y, display_center_y
+
+.set	red,   0b111111000000000000
+.set	green, 0b000000111111000000
+.set	blue,  0b000000000000111111
+.set	dark_red,   0b011111000000000000
+.set	dark_green, 0b000000011111000000
+.set	dark_blue,  0b000000000000011111
+.set	very_dark_red,   0b001111000000000000
+.set	very_dark_green, 0b000000001111000000
+.set	very_dark_blue,  0b000000000000001111
+.set	bright_red, red+dark_green+dark_blue
+.set	bright_green, very_dark_red+green+dark_blue
+.set	bright_blue, dark_red+dark_green+blue
+.set	black, 0
+.set	white, red+green+blue
+.set	grey, dark_red+dark_green+dark_blue
+.set	grey_2, 0b101000101000101000
+.set	yellow, red+green
+.set	purple, red+blue
+.set	purple_2, dark_red+blue
+.set	orange, 0b111111011111000000
+.set	orange_2, 0b111000011000000000
+.set	teal, 0b000100101000101000
+.set	dark_teal, dark_green+dark_blue
+@.set	color_7, 0b001111011111011111	@ dark teal
+.set	dark_orange, 0b011111001111000000
+@.set	turquoise, 0b000100011110101010
+@.set	turquoise, 0b000000110000100000
+.set	turquoise, blue+green
+
+.set	color_2, dark_blue+dark_red
+.set	color_8, 0b100000010000010000
+
+.ifeq	function-clock
+@ 1 = 134 us
+@ 2 = 242 us
+@ 3 = 468 us
+@ 4 = 900 us
+
+@ 4 = 976 us
+.set	log_base_2_of_how_many_circles_to_draw_for_one_hand, 4
+
+.set	hour_markers_big_radius, 55
+.set	hour_dots_little_radius_0369, 3
+.set	hour_dots_little_radius_others, 2
+.endif
+
+@.set	one_twelvth_of_the_lookup_table, 500000
+@.set one_twelvth_fp, (1<<fixed_point_shift_by)/12
+.set	one_twelvth_of_the_lookup_table, 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table*1<<fixed_point_shift_by/12
+.set	one_quarter_of_the_lookup_table, 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table*1<<fixed_point_shift_by/4
+
+.set	default_font_color, white
+.set	character_width, 5
+.set	character_height, 7
+.set	character_vertical_spacing_between_characters, 1
+.set	character_horizontal_spacing_between_characters, 1
+.set	font_null, ' 
+
+.set	default_line_color, white
+
+.set	display_routine_offset_x, 2
+.set	display_routine_offset_y, 1
+
+.ifeq	function-oscilloscope
+.set	number_of_horizontal_divisions, 10
+.set	number_of_vertical_divisions, 8
+.set	number_of_pixels_per_horizontal_division, 12
+.set	number_of_pixels_per_vertical_division, 12
+.set	number_of_vertical_grid_lines, number_of_horizontal_divisions	@ these are counted left-right, but are drawn up-down
+.set	number_of_horizontal_grid_lines, number_of_vertical_divisions	@ these are counted up-down, but are drawn left-right
+.set	spacing_between_vertical_grid_lines, number_of_pixels_per_horizontal_division	@ this is effectively center-to-center, so no need to add 1 when using this
+.set	spacing_between_horizontal_grid_lines, number_of_pixels_per_vertical_division	@ this is effectively center-to-center, so no need to add 1 when using this
+.set	width_of_trace_drawing_area, number_of_horizontal_divisions * number_of_pixels_per_horizontal_division+1
+.set	height_of_trace_drawing_area, number_of_vertical_divisions * number_of_pixels_per_vertical_division+1
+.iflt	display_height_in_pixels-height_of_trace_drawing_area
+	.error	"trace will be drawn off screen"
+.endif
+.iflt	display_width_in_pixels-width_of_trace_drawing_area
+	.error	"trace will be drawn off screen"
+.endif
+.set	top_border_gap, 12
+.set	trace_drawing_area_first_x, display_first_x+6
+.set	trace_drawing_area_first_y, display_first_y+top_border_gap
+.set	trace_drawing_area_last_x, trace_drawing_area_first_x+width_of_trace_drawing_area-1
+.set	trace_drawing_area_last_y, trace_drawing_area_first_y+height_of_trace_drawing_area-1
+.iflt	display_last_x-trace_drawing_area_last_x
+	.error	"trace will be drawn off screen"
+.endif
+.iflt	display_last_y-trace_drawing_area_last_y
+	.error	"trace will be drawn off screen"
+.endif
+
+@.set	horizontal_grid_lines_intensity, 0b01100
+@.set	vertical_grid_lines_intensity, 0b01000
+.set	horizontal_grid_lines_intensity, 9	@ range 0-63
+.set	vertical_grid_lines_intensity, 7	@ range 0-63
+.set	horizontal_grid_lines_color, horizontal_grid_lines_intensity<<12 + horizontal_grid_lines_intensity<<6 + horizontal_grid_lines_intensity
+.set	vertical_grid_lines_color, vertical_grid_lines_intensity<<12 + vertical_grid_lines_intensity<<6 + vertical_grid_lines_intensity
+
+.set	trace_drawing_area_center_y,	height_of_trace_drawing_area>>1 + trace_drawing_area_first_y
+.set	trace_drawing_area_center_x,	width_of_trace_drawing_area>>1 + trace_drawing_area_first_x
+.set	number_of_datapoints_in_a_displayed_trace, width_of_trace_drawing_area
+
+.set	position_x_of_single_character_trace_label, trace_drawing_area_first_x-4
+
+.set	number_of_characters_in_info_1_for_trace_1, 5
+.set	position_of_center_of_first_character_x_of_info_1_for_trace_1, 2 + (character_width+1)
+.set	position_of_center_of_first_character_y_of_info_1_for_trace_1, 3
+@.set	position_of_center_of_first_character_x_of_info_2_for_trace_1, position_of_center_of_first_character_x_of_info_1_for_trace_1+(character_width+1)*(number_of_characters_in_info_1_for_trace_1+1)
+@.set	position_of_center_of_first_character_y_of_info_2_for_trace_1, position_of_center_of_first_character_y_of_info_1_for_trace_1
+
+.set	number_of_characters_in_info_1_for_trace_2, 5
+.set	position_of_center_of_first_character_x_of_info_1_for_trace_2, position_of_center_of_first_character_x_of_info_1_for_trace_1 + (character_width+1)*(number_of_characters_in_info_1_for_trace_1+2)
+.set	position_of_center_of_first_character_y_of_info_1_for_trace_2, 3
+@.set	position_of_center_of_first_character_x_of_info_2_for_trace_2, position_of_center_of_first_character_x_of_info_1_for_trace_2+(character_width+1)*(number_of_characters_in_info_1_for_trace_2+2)
+@.set	position_of_center_of_first_character_y_of_info_2_for_trace_2, position_of_center_of_first_character_y_of_info_1_for_trace_2
+
+.set	number_of_characters_in_horizontal_info_1, 5
+.set	position_of_center_of_first_character_x_of_horizontal_info_1, position_of_center_of_first_character_x_of_info_1_for_trace_2 + (character_width+1)*(number_of_characters_in_info_1_for_trace_2+2)
+.set	position_of_center_of_first_character_y_of_horizontal_info_1, 3
+
+.set	position_of_center_of_first_character_in_global_info_1_x, display_first_x + 4
+.set	position_of_center_of_first_character_in_global_info_1_y, display_last_y - 4
+
+.set	position_of_center_of_first_character_in_global_info_2_x, display_center_x + 6*4
+.set	position_of_center_of_first_character_in_global_info_2_y, display_last_y - 4
+
+.set	position_of_center_of_first_character_in_battery_voltage_x, display_center_x - 6*1 - 3
+.set	position_of_center_of_first_character_in_battery_voltage_y, display_last_y - 4
+.endif
+

@@ -1,0 +1,47 @@
+.ifdef	testmode
+test_line_drawing_routines:
+	ldr	r0, =position_of_beginning_of_line_x
+	ldr	r1, =position_of_beginning_of_line_y
+	ldr	r2, =position_of_end_of_line_x
+	ldr	r3, =position_of_end_of_line_y
+	ldr	r5, =line_color
+	ldr	r6, =blue
+	str	r6, [r5]
+
+	ldr	r4, =80
+	strb	r4, [r0]
+	strb	r4, [r1]
+	ldr	r4, =64
+	strb	r4, [r2]
+	strb	r4, [r3]
+	call	draw_a_line_with_slope_magnitude_equal_to_one
+
+	ldr	r4, =80
+	strb	r4, [r0]
+	ldr	r4, =48
+	strb	r4, [r1]
+	ldr	r6, =red
+	str	r6, [r5]
+	call	draw_a_line_with_slope_magnitude_equal_to_one
+
+	ldr	r4, =48
+	strb	r4, [r0]
+	strb	r4, [r1]
+	ldr	r6, =yellow
+	str	r6, [r5]
+	call	draw_a_line_with_slope_magnitude_equal_to_one
+
+	ldr	r4, =48
+	strb	r4, [r0]
+	ldr	r4, =80
+	strb	r4, [r1]
+	ldr	r6, =green
+	str	r6, [r5]
+	call	draw_a_line_with_slope_magnitude_equal_to_one
+
+	return
+.endif
+
+@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@
+
+

@@ -1,0 +1,40 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+currently_retrieving_data_so_do_not_autotrigger:	.byte 0
+
+phase_of_trace_2:	.byte 0
+
+single_character_label_for_trace_1:	.byte 0
+single_character_label_for_trace_2:	.byte 0
+
+old_vertical_scale_for_trace_1:	.byte 0
+old_vertical_scale_for_trace_2:	.byte 0
+old_horizontal_scale:		.byte 0
+
+pixel_position_y_of_0V_level_of_trace:	.byte 0
+pixel_position_y_of_0V_level_of_trace_1:	.byte 0
+pixel_position_y_of_0V_level_of_trace_2:	.byte 0
+
+vertical_scale:	.byte 0
+vertical_scale_old:	.byte 0
+
+currently_selected_analog_input:	.byte 0
+
+gpio1_buffered_value:	.byte 0
+gpio2_buffered_value:	.byte 0
+gpio3_buffered_value:	.byte 0
+
+rotary_encoder_a_mode:	.byte 0
+rotary_encoder_b_mode:	.byte 0
+
+rotary_encoder_a_oscilloscope_mode_old:	.byte 0
+rotary_encoder_b_oscilloscope_mode_old:	.byte 0
+
+button_1_toggle_something_status:	.byte 0
+
+accumulated_labrador3_sampling_rate__number_of_accumulated_samples:	.byte 0
+
+measuring_frequency_of_RCO:	.byte 0
+
+should_autotrigger:	.byte 0
+

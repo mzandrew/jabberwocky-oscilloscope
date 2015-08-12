@@ -1,0 +1,79 @@
+.macro	write_image_to_screen	x=0, y=0, address
+	push	r0-r7
+	ldr	r0, =\address
+	ldrh	r2, [r0], #2	@ width
+	ldrh	r3, [r0], #2	@ height
+	sub	r2, r2, #1
+	sub	r3, r3, #1
+	mov	r1, r2	@ save width for later
+	ldr	r4, =\x	@ x offset
+	ldr	r5, =\y	@ y offset
+	add	r6, r4, r2
+	add	r7, r5, r3
+	display_set_start_column_and_end_column	start_column_register=r4, end_column_register=r6, saveregs=yes
+	display_set_start_row_and_end_row	start_row_register=r5, end_row_register=r7, saveregs=yes
+	display_write_command_immediate 0x5c, saveregs=yes	@ all further data is display ram data
+4:
+	mov	r2, r1
+5:
+@		debug	r0
+	ldr	r4, [r0], #4
+	mov	r5, r4, lsr #9
+	display_write_data_register     data_register=r5, saveregs=yes
+	display_write_data_register     data_register=r4, saveregs=yes
+	dec	r2
+	bHS	5b
+	dec	r3
+	bHS	4b
+	pop	r0-r7
+.endm
+
+.macro	write_15_bit_packed_image_to_screen	x=0, y=0, address
+	push	r0-r12
+	ldr	r0, =\address
+	ldrh	r2, [r0], #2	@ width
+	ldrh	r3, [r0], #2	@ height
+	sub	r2, r2, #1
+	sub	r3, r3, #1
+	mov	r1, r2	@ save width for later
+	ldr	r4, =\x	@ x offset
+	ldr	r5, =\y	@ y offset
+	add	r6, r4, r2
+	add	r7, r5, r3
+	display_set_start_column_and_end_column	start_column_register=r4, end_column_register=r6, saveregs=yes
+	display_set_start_row_and_end_row	start_row_register=r5, end_row_register=r7, saveregs=yes
+	display_write_command_immediate 0x5c, saveregs=yes	@ all further data is display ram data
+	display_switch_to_data_mode	saveregs=yes
+	display_write_pixel_setup	color_register=r4, temporary_register_0=r8, temporary_register_1=r9, temporary_register_2=r10, temporary_register_3=r11, temporary_register_4=r12
+4:
+	mov	r2, r1
+5:
+@		debug	r0
+	ldrh	r4, [r0], #2
+	mov	r5, r4
+	mov	r6, r4, lsr #5
+	mov	r7, r4, lsr #10
+	and	r5, r5, #0b11111
+	and	r6, r6, #0b11111
+@	and	r7, r7, #0b11111
+@	mov	r5, r5, lsl #1
+@	mov	r6, r6, lsl #1
+@	mov	r7, r7, lsl #1
+	ldr	r4, =0
+	add	r4, r4, r5, lsl #(1+0)
+	add	r4, r4, r6, lsl #(1+6)
+	add	r4, r4, r7, lsl #(1+12)
+	display_write_pixel	color_register=r4, temporary_register_0=r8, temporary_register_1=r9, temporary_register_2=r10, temporary_register_3=r11, temporary_register_4=r12
+@	ldr	r4, =white
+@	write_pixel	color_register=r4
+@	mov	r5, r4, lsr #9
+@	display_write_data_register     data_register=r5, saveregs=yes
+@	display_write_data_register     data_register=r4, saveregs=yes
+	dec	r2
+	bHS	5b
+	dec	r3
+	bHS	4b
+	pop	r0-r12
+	.endm
+
+

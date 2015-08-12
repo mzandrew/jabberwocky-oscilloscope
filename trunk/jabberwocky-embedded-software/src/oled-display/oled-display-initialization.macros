@@ -1,0 +1,82 @@
+.macro	setup_display
+	@ the display doesn't need its write line to change between transfers, so we activate it when we boot up and only deactivate it/reactivate it if we need to read from the display (which we may never have to do)
+	activate_display_write
+
+	@display_write_command_immediate	0xa4	@ turn all pixels off (black)
+	display_write_command_immediate	0xae	@ sleep mode on (this turns off the display)
+
+	call	clear_display
+
+	display_write_command_immediate	0xb1
+	display_write_data_immediate	0b10001	@ phase 1 period of 1 dclk, phase 2 period of 1 dclk
+
+	display_write_command_immediate	0xb3
+	display_write_data_immediate	0b11110000	@ oscillator frequency proportional to 1111b (maximum), divide by 1
+
+	display_write_command_immediate	0xa0
+	display_write_data_immediate	0b10111100 @ horizontal address increment, don't mirror vertically, colors C-B-A, 9-bit interface, multiplex, odd/even split, 18 bit color
+@	display_write_data_immediate	0b10101100 @ horizontal address increment, mirror vertically, colors C-B-A, 9-bit interface, multiplex, odd/even split, 18 bit color
+
+	display_write_command_immediate	0xb0
+	display_write_data_immediate	0b101	@ external VSL
+
+	display_write_command_immediate	0xad
+	display_write_data_immediate	0b10001110	@ external Vcc, internal pre-charge voltage source
+
+	display_write_command_immediate	0xbb
+	display_write_data_immediate	0x1c	@ set pre-charge voltage of color A to 1ch
+	display_write_data_immediate	0x1c, mode_is_already_set=yes	@ B
+	display_write_data_immediate	0x1c, mode_is_already_set=yes	@ C
+
+	display_write_command_immediate	0xbe
+	display_write_data_immediate	0x1f	@ set Vcomh to 1fh
+
+	display_write_command_immediate	0xc1
+@	display_write_data_immediate	0xaa	@ set contrast current for color A
+@	display_write_data_immediate	0xb4, mode_is_already_set=yes	@ B
+@	display_write_data_immediate	0xc8, mode_is_already_set=yes	@ C
+	display_write_data_immediate	0xff	@ set contrast current for color A
+	display_write_data_immediate	0xff, mode_is_already_set=yes	@ B
+	display_write_data_immediate	0xff, mode_is_already_set=yes	@ C
+
+	display_write_command_immediate	0xca
+	display_write_data_immediate	0x7f	@ set mux ratio to 7fh
+
+	display_write_command_immediate	0xa1
+	@display_write_data_immediate	0	@ start with row 0
+	display_write_data_immediate	124	@ this is how to get it to make 0,0 in the upper left hand corner
+	@display_write_data_immediate	64	@ this is how to set the vertically scroll
+
+	display_write_command_immediate	0x92
+	display_write_data_immediate	0x01	@ fill rectangles and circles
+
+	ldr	r0, =initial_oled_display_master_current_value
+	display_set_master_current_from_register	master_current_register=r0
+
+@	display_write_command_immediate	0xc7
+@	display_write_data_immediate	0x0	@ set master current to minimum
+@	display_write_data_immediate	0xf	@ set master current to maximum
+
+	display_write_command_immediate	0x15
+	display_write_data_immediate	0	@ set column start address
+	display_write_data_immediate	127, mode_is_already_set=yes	@ set column end address
+
+	display_write_command_immediate	0x75
+@	display_write_data_immediate	4	@ set row start address
+@	display_write_data_immediate	127, mode_is_already_set=yes	@ set row end address
+	display_write_data_immediate	0	@ set row start address
+	display_write_data_immediate	123, mode_is_already_set=yes	@ set row end address
+
+	@ the following delay is necessary so that we don't start writing to the display ram while it's clearing the ram
+	@ writing commands to the display is still okay here, just not data to the ram
+	@ only remove this if you can guarantee that there'll be that much of a delay before the first write to display ram
+	delay_imm	6000
+@	delay_imm	600
+
+	display_sleep_mode_off
+	display_normal_mode
+@		display_turn_all_pixels_off
+@		display_turn_all_pixels_on
+@		display_sleep_mode
+.endm
+

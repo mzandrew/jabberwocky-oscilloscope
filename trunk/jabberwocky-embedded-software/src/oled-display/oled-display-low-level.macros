@@ -1,0 +1,139 @@
+@ ============================================================================
+@ low-level stuff that manipulates data lines directly
+@ ============================================================================
+
+.macro	display_write_command_immediate	command, mode_is_already_set=no, saveregs=no
+	@ can make this 2 instructions shorter if we put d/c# as the 10th bit of the data bus
+	@ but then we need to OR every regular data bus value with the command or data high bit
+	@ which would take an extra 2 instructions per 18 bit display ram (so, 2 instructions/pixel)
+	@ so maybe that's less efficient
+	.ifc	\saveregs,yes
+		push	r0-r2
+	.endif
+	ldr	r0, =display_data_bus_port
+	ldr	r1, =\command
+	.ifnc	display_data_bus_shift,0
+		mov	r1, r1, lsl #display_data_bus_shift
+	.endif
+	str	r1, [r0, #Output_Data_Status_Register_offset]	@ load data bus with command
+	.ifnc	display_data_bus_port,display_control_signals_port
+		ldr	r0, =display_control_signals_port
+	.endif
+@@	ldr	r1, =bit00
+	.ifc	\mode_is_already_set, no
+@@		mov	r2, r1, lsl #display_d_high_c_low_is_port_bit
+		ldr	r2, =1<<display_d_high_c_low_is_port_bit
+	.endif
+@@	mov	r3, r1, lsl #display_cs_active_low_is_port_bit
+	ldr	r1, =1<<display_cs_active_low_is_port_bit
+@	mov	r4, r1, lsl #display_wr_port_a_bit
+@	mov	r5, r1, lsl #display_cs_active_low_is_port_bit | display_wr_port_a_bit
+	.ifc	\mode_is_already_set, no
+		str	r2, [r0, #Clear_Output_Data_Register_offset]	@ activate command mode
+	.endif
+	str	r1, [r0, #Clear_Output_Data_Register_offset]	@ activate chip select
+@	str	r4, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+@	str	r4, [r0, #Set_Output_Data_Register_offset]	@ deactivate write
+@	str	r5, [r0, #Set_Output_Data_Register_offset]	@ deactivate write and chip select
+	str	r1, [r0, #Set_Output_Data_Register_offset]	@ deactivate chip select
+	.ifc	\saveregs,yes
+		pop	r0-r2
+	.endif
+.endm
+
+.macro	display_write_data_immediate	data, mode_is_already_set=no, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r2
+	.endif
+	ldr	r0, =display_data_bus_port
+	ldr	r1, =\data
+	.ifnc	display_data_bus_shift,0
+		mov	r1, r1, lsl #display_data_bus_shift
+	.endif
+	str	r1, [r0, #Output_Data_Status_Register_offset]	@ load data bus with command
+	.ifnc	display_data_bus_port,display_control_signals_port
+		ldr	r0, =display_control_signals_port
+	.endif
+	.ifc	\mode_is_already_set, no
+		ldr	r2, =1<<display_d_high_c_low_is_port_bit
+	.endif
+	ldr	r1, =1<<display_cs_active_low_is_port_bit
+@	mov	r4, r1, lsl #display_wr_port_a_bit
+@	mov	r5, r1, lsl #display_cs_active_low_is_port_bit | display_wr_port_a_bit
+	.ifc	\mode_is_already_set, no
+		str	r2, [r0, #Set_Output_Data_Register_offset]	@ activate data mode
+	.endif
+	str	r1, [r0, #Clear_Output_Data_Register_offset]	@ activate chip select
+@	str	r4, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+@	str	r4, [r0, #Set_Output_Data_Register_offset]	@ deactivate write
+@	str	r4, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+@	str	r5, [r0, #Set_Output_Data_Register_offset]	@ deactivate write and chip select
+	str	r1, [r0, #Set_Output_Data_Register_offset]	@ deactivate chip select
+	.ifc	\saveregs,yes
+		pop	r0-r2
+	.endif
+.endm
+
+.macro	display_write_data_register	data_register, mode_is_already_set=no, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r2
+	.endif
+	mov	r1, \data_register
+	ldr	r0, =display_data_bus_port
+	.ifnc	display_data_bus_shift,0
+		mov	r1, r1, lsl #display_data_bus_shift
+	.endif
+	str	r1, [r0, #Output_Data_Status_Register_offset]	@ load data bus with data
+	.ifnc	display_data_bus_port,display_control_signals_port
+		ldr	r0, =display_control_signals_port
+	.endif
+	.ifc	\mode_is_already_set, no
+		ldr	r2, =1<<display_d_high_c_low_is_port_bit
+	.endif
+	ldr	r1, =1<<display_cs_active_low_is_port_bit
+@	mov	r4, r1, lsl #display_wr_port_a_bit
+@	mov	r5, r1, lsl #display_cs_active_low_is_port_bit | display_wr_port_a_bit
+@		mov	r5, r1, lsl #display_wr_port_a_bit
+@		add	r5, r5, r1, lsl #display_cs_active_low_is_port_bit
+	.ifc	\mode_is_already_set, no
+		str	r2, [r0, #Set_Output_Data_Register_offset]	@ activate data mode
+	.endif
+	str	r1, [r0, #Clear_Output_Data_Register_offset]	@ activate chip select
+@	str	r4, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+@	str	r4, [r0, #Set_Output_Data_Register_offset]	@ deactivate write
+@	str	r4, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+@	str	r5, [r0, #Set_Output_Data_Register_offset]	@ deactivate write and chip select
+	str	r1, [r0, #Set_Output_Data_Register_offset]	@ deactivate chip select
+	.ifc	\saveregs,yes
+		pop	r0-r2
+	.endif
+.endm
+
+.macro	display_switch_to_data_mode	saveregs=no
+	@ this takes 4 instructions
+	@ doing it inline takes only 2 instructions, but we do it every time
+	@ so we need to provide both kinds
+	@ elegant = using mode_is_already_set=no for the first d or c and then =yes for the rest
+	.ifc	\saveregs,yes
+		push	r0-r1
+	.endif
+	ldr	r0, =display_control_signals_port
+	ldr	r1, =1<<display_d_high_c_low_is_port_bit
+	str	r1, [r0, #Set_Output_Data_Register_offset]	@ activate data
+	.ifc	\saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	activate_display_write
+	ldr	r0, =display_control_signals_port
+	ldr	r1, =1<<display_wr_active_low_is_port_bit
+	str	r1, [r0, #Clear_Output_Data_Register_offset]	@ activate write
+.endm
+
+.macro	deactivate_display_write
+	ldr	r0, =display_control_signals_port
+	ldr	r1, =1<<display_wr_active_low_is_port_bit
+	str	r1, [r0, #Set_Output_Data_Register_offset]	@ deactivate write
+.endm
+

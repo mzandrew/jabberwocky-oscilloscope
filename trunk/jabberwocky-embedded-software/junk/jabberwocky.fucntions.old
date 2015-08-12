@@ -1,0 +1,1091 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+.ifne	sine_and_cosine_lookup_table_available
+make_a_multifrequency_trace_1:
+	push	r0-r8
+	ldr	r6, =1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table @ number of elements in a sine or cosine array
+	ldr	r7, =beginning_of_cosine_lookup_table
+	ldr	r8, =beginning_of_sine_lookup_table
+	ldr	r0, =2*0	@ initial phase for cosine component
+	ldr	r1, =2*3	@ initial phase for sine component
+	ldr	r4, =beginning_of_trace_1
+	ldr	r5, =number_of_datapoints_in_a_displayed_trace
+make_a_multifrequency_trace_1_next:
+	add	r0, r0,	#2*2	@ cosine frequency
+	add	r1, r1, #2*14	@ sine frequency
+make_a_multifrequency_trace_1_next_next:
+	cmp	r0, r6, lsl #1
+	subGE	r0, r0, r6, lsl #1
+	bGE	make_a_multifrequency_trace_1_next_next
+make_a_multifrequency_trace_1_next_next_next:
+	cmp	r1, r6, lsl #1
+	subGE	r1, r1, r6, lsl #1
+	bGE	make_a_multifrequency_trace_1_next_next_next
+	ldrsh	r2, [r7, r0]
+	mov	r2, r2, lsl #3	@ cosine log base 2 magnitude
+	ldrsh	r3, [r8, r1]
+	mov	r3, r3, lsl #1	@ sine log base 2 magnitude
+	add	r2, r2, r3
+	mov	r2, r2, asr #1
+@	cmp	r5, #number_of_datapoints_in_a_displayed_trace>>1
+@	subLO	r2, r2, #8<<fixed_point_shift_by
+	str	r2, [r4], #4
+	dec	r5
+	bGE	make_a_multifrequency_trace_1_next
+	pop	r0-r8
+	return
+.endif
+
+.ifne	sine_and_cosine_lookup_table_available
+make_a_multifrequency_trace_2:
+	push	r0-r8
+	ldr	r6, =1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table @ number of elements in a sine or cosine array
+	ldr	r7, =beginning_of_cosine_lookup_table
+	ldr	r8, =beginning_of_sine_lookup_table
+	ldr	r1, =phase_of_trace_2
+	ldrb	r1, [r1]
+	keep_it_between_signed	min=phase_of_trace_2_minimum, it=r1, max=phase_of_trace_2_maximum
+	mov	r1, r1, lsl #1
+	ldr	r0, =2*0	@ initial phase for cosine component
+	add	r0, r0, r1
+	ldr	r1, =2*34	@ initial phase for sine component
+	ldr	r4, =beginning_of_trace_2
+	ldr	r5, =number_of_datapoints_in_a_displayed_trace
+make_a_multifrequency_trace_2_next:
+	add	r0, r0,	#2*20	@ cosine frequency
+	add	r1, r1, #2*2	@ sine frequency
+make_a_multifrequency_trace_2_next_next:
+	cmp	r0, r6, lsl #1
+	subGE	r0, r0, r6, lsl #1
+	bGE	make_a_multifrequency_trace_2_next_next
+make_a_multifrequency_trace_2_next_next_next:
+	cmp	r1, r6, lsl #1
+	subGE	r1, r1, r6, lsl #1
+	bGE	make_a_multifrequency_trace_2_next_next_next
+	ldrsh	r2, [r7, r0]
+	mov	r2, r2, lsl #1	@ cosine log base 2 magnitude
+	ldrsh	r3, [r8, r1]
+	mov	r3, r3, lsl #1	@ sine log base 2 magnitude
+	add	r2, r2, r3
+	mov	r2, r2, asr #1
+@	cmp	r5, #number_of_datapoints_in_a_displayed_trace>>1
+@	subLO	r2, r2, #8<<fixed_point_shift_by
+	str	r2, [r4], #4
+	dec	r5
+	bGE	make_a_multifrequency_trace_2_next
+	pop	r0-r8
+	return
+.endif
+
+@ ============================================================================
+
+determine_drawing_parameters_for_the_current_trace:
+	push	r0-r2
+@		ldr	r0, =0x30303030
+@		debug	r0
+	ldr	r1, =vertical_scale_for_the_current_trace
+	ldrb	r1, [r1]
+	rsb	r1, r1, #6	@ this is the table entry number that corresponds to a scale of 1V/div
+	cmp	r1, #0
+	movLT	r1, #0
+	ldr	r0, =log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace
+	str	r1, [r0]
+@		debug	r1
+	call	determine_Volts_per_division_from_vertical_scale_setting_for_the_current_trace
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace	@ it's important that this is valid before getting here!
+	ldr	r0, [r0]
+	cmp	r0, #1<<fixed_point_shift_by
+	bHS	draw_trace_one_or_greater
+	ldr	r1, =Volts_1
+	ldr	r2, =fixed_point__zero_point_000100
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000100000
+	ldr	r2, =fixed_point__zero_point_000200
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000200000
+	ldr	r2, =fixed_point__zero_point_000500
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000500000
+	ldr	r2, =fixed_point__zero_point_001000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_001000000
+	ldr	r2, =fixed_point__zero_point_002000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_002000000
+	ldr	r2, =fixed_point__zero_point_005000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_005000000
+	ldr	r2, =fixed_point__zero_point_010000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_010000000
+	ldr	r2, =fixed_point__zero_point_020000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_020000000
+	ldr	r2, =fixed_point__zero_point_050000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_050000000
+	ldr	r2, =fixed_point__zero_point_100000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_100000000
+	ldr	r2, =fixed_point__zero_point_200000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_200000000
+	ldr	r2, =fixed_point__zero_point_500000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_500000000
+	b	draw_trace_do_it
+draw_trace_one_or_greater:
+	ldr	r1, =1
+draw_trace_do_it:
+	ldr	r0, =inverse_of_the_vertical_scale_in_divisions_per_Volt_for_the_current_trace
+	str	r1, [r0]
+@		debug	r1
+	pop	r0-r2
+	return
+
+determine_Volts_per_division_from_vertical_scale_setting_for_the_current_trace:
+	push	r0-r4
+	ldr	r0, =vertical_scale_for_the_current_trace
+	ldrb	r0, [r0]
+	keep_it_between_signed_ping_pong	min=vertical_scale_minimum, it=r0, max=vertical_scale_maximum
+	sub	r0, r0, #1 @ 1, not vertical_scale_minimum, since we might want to just not use the first part of the table
+	ldr	r1, =Voltage_table_beginning
+	ldr	r2, =Voltage_table_element_length
+	@ r0 = vertical scale - 1 @ 1, not vertical_scale_minimum, since we might want to just not use the first part of the table
+	@ r1 = beginning of voltage table
+	@ r2 = Voltage_table_element_length
+	@ r3 = desired table element's offset from beginning of voltage table
+	@ r4 = desired value
+	mla	r3, r2, r0, r1
+	ldr	r4, [r3, #Voltage_threshold_offset_from_beginning_of_element]
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	str	r4, [r0]
+	pop	r0-r4
+	return
+
+change_vertical_scale_for_trace_1:
+	push	r1-r12	@ bug/future
+	change_vertical_scale__macro	trace=1
+	pop	r1-r12	@ bug/future
+	return
+
+change_vertical_scale_for_trace_2:
+	push	r1-r12	@ bug/future
+	change_vertical_scale__macro	trace=2
+	pop	r1-r12	@ bug/future
+	return
+
+change_vertical_offset_for_trace_1:
+	push	r1-r12	@ bug/future
+	change_vertical_offset__macro	trace=1
+	pop	r1-r12	@ bug/future
+	return
+
+change_vertical_offset_for_trace_2:
+	push	r1-r12	@ bug/future
+	change_vertical_offset__macro	trace=2
+	pop	r1-r12	@ bug/future
+	return
+
+change_horizontal_scale:
+	push	r0-r12	@ bug/future
+	@bugmza
+	ldr	r0, =rotary_encoder_b_signed_delta_stable
+	ldrsb	r1, [r0]
+@		debug	r1
+	ldr	r0, =horizontal_scale
+	ldrb	r2, [r0]
+@	ldr	r4, =old_horizontal_scale
+@	mov	r5, r2
+@		ldr	r6, =0x56565656
+@		debug	r6
+@		debug	r2
+	keep_it_between_signed_ping_pong	min=horizontal_scale_minimum, it=r2, max=horizontal_scale_maximum
+@	strb	r2, [r4]
+@		debug	r2
+	add	r1, r1, r2
+@		debug	r1
+	keep_it_between_signed_ping_pong	min=horizontal_scale_minimum, it=r1, max=horizontal_scale_maximum
+@		debug	r1
+	strb	r1, [r0]
+@		call	prepare_screen_for_drawing_on_it
+@		debug	r1
+@		debug	r2
+	cmp	r2, r1
+	ldrNE	r0, =display_needs_redrawing
+	ldrNE	r1, =1
+	strNEb	r1, [r0]
+	pop	r0-r12	@ bug/future
+	return
+
+determine_time_per_division_from_horizontal_scale_setting:
+	push	r0-r4
+	ldr	r0, =horizontal_scale
+	ldrb	r0, [r0]
+	keep_it_between_signed_ping_pong	min=horizontal_scale_minimum, it=r0, max=horizontal_scale_maximum
+	sub	r0, r0, #1 @ 1, not horizontal_scale_minimum, since we might want to just not use the first part of the table
+	ldr	r1, =time_table_beginning
+	ldr	r2, =time_table_element_length
+	@ r0 = horizontal scale - 1 @ 1, not horizontal_scale_minimum, since we might want to just not use the first part of the table
+	@ r1 = beginning of time table
+	@ r2 = time_table_element_length
+	@ r3 = desired table element's offset from beginning of time table
+	@ r4 = desired value
+	mla	r3, r2, r0, r1
+	ldr	r4, [r3, #time_threshold_offset_from_beginning_of_element]
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	str	r4, [r0]
+	pop	r0-r4
+	return
+
+determine_sampling_frequency_from_time_per_division:
+	push	r0-r12	@ bug/future
+	@ period = seconds/div / pixels/div
+	@ frequency = 1/period = pixels/div / seconds/div
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+	ldr	r1, =inverse_of_zero_point_000000001
+	ldr	r2, =double_precision_fixed_point__zero_point_000000002
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000002
+	ldr	r2, =double_precision_fixed_point__zero_point_000000005
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000005
+	ldr	r2, =double_precision_fixed_point__zero_point_000000010
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000010
+	ldr	r2, =double_precision_fixed_point__zero_point_000000020
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000020
+	ldr	r2, =double_precision_fixed_point__zero_point_000000050
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000050
+	ldr	r2, =double_precision_fixed_point__zero_point_000000100
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000100
+	ldr	r2, =double_precision_fixed_point__zero_point_000000200
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000200
+	ldr	r2, =double_precision_fixed_point__zero_point_000000500
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000000500
+	@
+	ldr	r2, =double_precision_fixed_point__zero_point_000001000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000001000
+	ldr	r2, =double_precision_fixed_point__zero_point_000002000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000002000
+	ldr	r2, =double_precision_fixed_point__zero_point_000005000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000005000
+	ldr	r2, =double_precision_fixed_point__zero_point_000010000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000010000
+	ldr	r2, =double_precision_fixed_point__zero_point_000020000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000020000
+	ldr	r2, =double_precision_fixed_point__zero_point_000050000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000050000
+	ldr	r2, =double_precision_fixed_point__zero_point_000100000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000100000
+	ldr	r2, =double_precision_fixed_point__zero_point_000200000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000200000
+	ldr	r2, =double_precision_fixed_point__zero_point_000500000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_000500000
+	@
+	ldr	r2, =double_precision_fixed_point__zero_point_001000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_001000000
+	ldr	r2, =double_precision_fixed_point__zero_point_002000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_002000000
+	ldr	r2, =double_precision_fixed_point__zero_point_005000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_005000000
+	ldr	r2, =double_precision_fixed_point__zero_point_010000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_010000000
+	ldr	r2, =double_precision_fixed_point__zero_point_020000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_020000000
+	ldr	r2, =double_precision_fixed_point__zero_point_050000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_050000000
+	ldr	r2, =double_precision_fixed_point__zero_point_100000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_100000000
+	ldr	r2, =double_precision_fixed_point__zero_point_200000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_200000000
+	ldr	r2, =double_precision_fixed_point__zero_point_500000000
+	cmp	r0, r2
+	ldrHS	r1, =inverse_of_zero_point_500000000
+	@
+	ldr	r2, =double_precision_fixed_point__one
+	cmp	r0, r2
+	ldrHS	r1, =1	@ inverse of 1
+	@
+	ldr	r2, =number_of_pixels_per_horizontal_division
+	@ r0 = double precision fixed point seconds per division
+	@ r1 = inverse of r0 (an integer, not a fixed-point value)
+	@ r2 = number of pixels per division (12)
+.ifc	asdf,asdf
+	mov	r0, r2
+	call	multiply_32bit_by_32bit_with_32bit_result
+.else
+	smull	r0, r1, r2, r1
+@	mov	r0, r0, lsl #1	@ nyquist - no, they're just selecting the sampling frequency here
+	.warning	"determine_sampling_frequency_from_time_per_division doesn't handle the case where the multiplication overflows 32 bits"
+.endif
+	ldr	r2, =sampling_frequency
+	ldr	r3, [r2]
+	cmp	r3, r0
+	bEQ	determine_sampling_frequency_from_time_per_division_done
+	ldr	r4, =old_sampling_frequency
+	str	r3, [r4]
+determine_sampling_frequency_from_time_per_division_done:
+	str	r0, [r2]
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+setup_timer_counter_channel_clock_sources:
+	push	r0-r2
+	ldr	r0, =TC_012
+@	ldr	r2, [r0, #TC_Block_Mode_Register_offset]
+@	and	r2, r2, #0b001111
+	ldr	r2, =0
+	ldr	r1, =0b00	@ select TCLK0/trigger-b for TC0's XC0
+@	ldr	r1, =0b10	@ select TIOA1/RAMP for TC0's XC0
+@	ldr	r1, =0b11	@ select TIOA2 for TC0's XC0
+	add	r2, r2, r1, lsl #0	@ TC0's XC0
+@	ldr	r1, =0b00	@ select TCLK1/trigger-a for TC1's XC1
+	ldr	r1, =0b10	@ select TIOA0/nRUN for TC1's XC1
+@	ldr	r1, =0b11	@ select TIOA2 for TC1's XC1
+	add	r2, r2, r1, lsl #2	@ TC1's XC1
+	ldr	r1, =0b00	@ select TCLK2/RCO for TC2's XC2
+@	ldr	r1, =0b10	@ select TIOA0/nRUN for TC2's XC2
+@	ldr	r1, =0b11	@ select TIOA1/RAMP for TC2's XC2
+	add	r2, r2, r1, lsl #4	@ TC2's XC2
+	str	r2, [r0, #TC_Block_Mode_Register_offset]
+	pop	r0-r2
+	return
+
+@ ============================================================================
+
+setup_timer_counter_channel_for_measuring_frequency_of_RCO:
+	push	r1-r12	@ bug/future
+	ldr	r0, =timer_counter_channel_for_measuring_frequency_of_RCO
+@	.warning	"setup_timer_counter_channel_for_measuring_frequency_of_RCO doesn't do anything"
+@	ldr	r2, =0b000	@ select timer_clock1 = master clock / 2^1
+@	ldr	r2, =0b001	@ select timer_clock2 = master clock / 2^3
+@	ldr	r2, =0b010	@ select timer_clock3 = master clock / 2^5
+@	ldr	r2, =0b011	@ select timer_clock4 = master clock / 2^7
+@	ldr	r2, =0b100	@ select timer_clock5 = master clock / 2^10
+@	ldr	r2, =0b101	@ select external clock XC0
+@	ldr	r2, =0b110	@ select external clock XC1
+	ldr	r2, =0b111	@ select external clock XC2/TCLK2/RCO
+@	ldr	r1, =bit00
+@	add	r2, r2, r1, lsl #15	@ enable waveform mode
+@	ldr	r3, =0b00	@ do not do anything when an external event happens
+	ldr	r3, =0b01	@ select the rising edge of the external event
+@	ldr	r3, =0b10	@ select the falling edge of the external event
+@	ldr	r3, =0b11	@ select both edges of the external event
+	add	r2, r2, r3, lsl #8 @ ETRGEDG
+@	ldr	r3, =0b00 @ the selected clock is not gated with any external signal
+@	ldr	r3, =0b01 @ the selected clock is gated with XC0
+@	ldr	r3, =0b10 @ the selected clock is gated with XC1
+@	ldr	r3, =0b11 @ the selected clock is gated with XC2
+@	add	r2, r2, r3, lsl #4  @ BURST
+	str	r2, [r0, #TC_Channel_Mode_Register_offset]
+@	call	enable_clock_for_and_software_trigger_timer_counter_channel_for_measuring_frequency_of_RCO
+	pop	r1-r12	@ bug/future
+	return
+
+setup_to_measure_frequency_of_RCO:
+	push	r0-r1
+	ldr	r0, =measuring_frequency_of_RCO
+	ldr	r1, =2
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+measure_frequency_of_RCO_if_desired:
+	@ if measuring_frequency_of_RCO = 2, then trigger the RCO clock
+	@ if measuring_frequency_of_RCO = 1, then see how many we got
+	push	r0-r1
+	ldr	r0, =measuring_frequency_of_RCO
+	ldrb	r1, [r0]
+	cmp	r1, #2
+	bEQ	measure_frequency_of_RCO_if_desired_2
+	cmp	r1, #1
+	bEQ	measure_frequency_of_RCO_if_desired_1
+	b	measure_frequency_of_RCO_if_desired_done
+measure_frequency_of_RCO_if_desired_1:
+	call	measure_frequency_of_RCO
+	ldr	r1, =0
+	strb	r1, [r0]
+	b	measure_frequency_of_RCO_if_desired_done
+measure_frequency_of_RCO_if_desired_2:
+	call	enable_clock_for_and_software_trigger_timer_counter_channel_for_measuring_frequency_of_RCO
+	ldr	r1, =1
+	strb	r1, [r0]
+	ldr	r0, =number_of_milliseconds_in_a_RCO_timing_period
+	ldr	r2, =number_of_RCO_timing_periods_in_one_second
+	ldr	r1, =10
+	ldr	r3, =100
+@	ldr	r4, =frequency_of_LAB3
+@	ldr	r4, =sampling_frequency
+	ldr	r4, =dac_a_buffered_value
+	ldr	r4, [r4]
+@	ldr	r5, =24000000
+	ldr	r5, =5300
+	cmp	r4, r5
+@	movLO	r1, r1, lsl #1
+@	movLO	r3, r3, lsr #1
+	movLO	r1, #20
+	movLO	r3, #50
+@	ldr	r5, =2400000
+	ldr	r5, =4900
+	cmp	r4, r5
+	movLO	r1, #40
+	movLO	r3, #25
+	str	r1, [r0]
+	str	r3, [r2]
+measure_frequency_of_RCO_if_desired_done:
+	pop	r0-r1
+	return
+
+measure_frequency_of_RCO:
+	push	r0-r12	@ bug/future
+@		ldr	r0, =0x17761776
+@		debug r0
+	ldr	r1, =timer_counter_channel_for_measuring_frequency_of_RCO
+	call	disable_clock_for_timer_counter_channel_for_measuring_frequency_of_RCO
+	ldr	r0, [r1, #TC_Counter_Value_Register_offset]
+@	call	enable_clock_for_and_software_trigger_timer_counter_channel_for_measuring_frequency_of_RCO
+	@ r0 = current value of counter
+@		debug_if_changed	r0
+	ldr	r1, =number_of_RCO_clock_ticks_in_last_timing_period
+	str	r0, [r1]
+	ldr	r1, =number_of_RCO_timing_periods_in_one_second
+	ldr	r1, [r1]
+	call	multiply_32bit_by_32bit_with_32bit_result
+	ldr	r1, =frequency_of_RCO
+	str	r0, [r1]
+@		debug	r0
+	ldr	r1, =ratio_of_RCO_to_internal_lab3_frequency
+	call	multiply_32bit_by_32bit_with_32bit_result
+	ldr	r1, =frequency_of_LAB3
+	str	r0, [r1]
+	call	accumulate_labrador3_sampling_rate
+	call	get_next_frequency_for_dac_a_to_labrador3_frequency_table_if_desired
+	pop	r0-r12	@ bug/future
+	return
+
+enable_clock_for_and_software_trigger_timer_counter_channel_for_measuring_frequency_of_RCO:
+	push	r0-r12	@ bug/future
+	ldr	r0, =timer_counter_channel_for_measuring_frequency_of_RCO
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<0 @ enable the clock, as long as disable isn't also set
+@	orr	r1, r1, #bit00<<1 @ disable the clock
+	orr	r1, r1, #bit00<<2 @ software trigger the clock
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+disable_clock_for_timer_counter_channel_for_measuring_frequency_of_RCO:
+	push	r0-r12	@ bug/future
+	ldr	r0, =timer_counter_channel_for_measuring_frequency_of_RCO
+	ldr	r1, =0
+@	orr	r1, r1, #bit00<<0 @ enable the clock, as long as disable isn't also set
+	orr	r1, r1, #bit00<<1 @ disable the clock
+@	orr	r1, r1, #bit00<<2 @ software trigger the clock
+	str	r1, [r0, #TC_Channel_Control_Register_offset]
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+setup_for_dac_a_to_labrador3_frequency_table:
+	push	r0-r1
+	ldr	r0, =dac_a_minimum_allowable_value
+	ldr	r1, =dac_a_buffered_value
+	str	r0, [r1]
+	call	update_dac_a_from_buffered_value
+	ldr	r0, =dac_a_to_labrador3_frequency_table_offset
+	ldr	r1, =0
+@		ldr	r1, =4*30 @ this offset works for 120MHz only
+	str	r1, [r0]
+	ldr	r0, =acquiring_dac_a_to_labrador3_frequency_table
+	ldr	r1, =1
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+set_next_frequency_for_dac_a_to_labrador3_frequency_table_if_desired:
+	push	r0-r1
+	ldr	r0, =acquiring_dac_a_to_labrador3_frequency_table
+	ldrb	r1, [r0]
+	cmp	r1, #1
+	bNE	skip_setting_next_frequency_for_dac_a_to_labrador3_frequency_table
+	call	set_next_frequency_for_dac_a_to_labrador3_frequency_table
+skip_setting_next_frequency_for_dac_a_to_labrador3_frequency_table:
+	pop	r0-r1
+	return
+
+get_next_frequency_for_dac_a_to_labrador3_frequency_table_if_desired:
+	push	r0-r1
+	ldr	r0, =acquiring_dac_a_to_labrador3_frequency_table
+	ldrb	r1, [r0]
+	cmp	r1, #1
+	bNE	skip_getting_next_frequency_for_dac_a_to_labrador3_frequency_table
+	call	get_next_frequency_for_dac_a_to_labrador3_frequency_table
+skip_getting_next_frequency_for_dac_a_to_labrador3_frequency_table:
+	pop	r0-r1
+	return
+
+set_next_frequency_for_dac_a_to_labrador3_frequency_table:
+	@ call this to set up the next RCO/lab3 sampling frequency, but before measuring it
+	push	r0-r12	@ bug/future
+	ldr	r1, =dac_a_maximum_allowable_value
+	ldr	r2, =dac_a_buffered_value
+	ldr	r0, [r2]
+	add	r0, r0, #dac_a_to_labrador3_frequency_table_delta
+	cmp	r0, r1
+	bHI	get_next_frequency_for_dac_a_to_labrador3_frequency_table_all_done
+	str	r0, [r2]
+	call	update_dac_a_from_buffered_value
+	call	setup_to_measure_frequency_of_RCO
+	b	get_next_frequency_for_dac_a_to_labrador3_frequency_table_done
+get_next_frequency_for_dac_a_to_labrador3_frequency_table_all_done:
+	ldr	r0, =acquiring_dac_a_to_labrador3_frequency_table
+	ldr	r1, =0
+	strb	r1, [r0]
+	call	clear_accumulated_labrador3_sampling_rate
+get_next_frequency_for_dac_a_to_labrador3_frequency_table_done:
+	pop	r0-r12	@ bug/future
+	return
+
+get_next_frequency_for_dac_a_to_labrador3_frequency_table:
+	@ call this after we aquire the latest RCO/lab3 sampling frequency
+	push	r0-r12	@ bug/future
+	ldr	r3, =frequency_of_LAB3
+	ldr	r3, [r3]
+	ldr	r4, =dac_a_to_labrador3_frequency_table
+	ldr	r5, =dac_a_to_labrador3_frequency_table_offset
+	ldr	r6, [r5]
+@		debug_if_changed	r4
+@		debug_if_changed	r5
+@		debug_if_changed	r6
+@		debug_if_changed	r3
+	str	r3, [r4, r6]
+	add	r6, r6, #4
+	str	r6, [r5]
+	pop	r0-r12	@ bug/future
+	return
+
+@ obsolete:
+fill_dac_a_to_labrador3_frequency_table_linearly:
+	push	r0-r12	@ bug/future
+	ldr	r0, =dac_a_minimum_allowable_value
+	ldr	r1, =dac_a_maximum_allowable_value
+	ldr	r2, =dac_a_buffered_value
+	ldr	r3, [r2]
+fill_dac_a_to_labrador3_frequency_table_linearly_next:
+	str	r0, [r2]
+	call	update_dac_a_from_buffered_value
+	add	r0, r0, #dac_a_to_labrador3_frequency_table_delta
+	cmp	r0, r1
+	bLS	fill_dac_a_to_labrador3_frequency_table_linearly_next
+	str	r3, [r2]
+	call	update_dac_a_from_buffered_value
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want:
+	push	r0-r5
+		ldr	r0, =0
+@		debug	r0
+	ldr	r0, =dac_a_to_labrador3_frequency_table
+	ldr	r2, =sampling_frequency
+	ldr	r2, [r2]
+@		@ bug/future:  the following is a fudge:
+@		ldr	r1, =3
+@		mul	r2, r1, r2
+@		debug	r2
+	ldr	r3, =dac_a_minimum_allowable_value
+	ldr	r4, =dac_a_lower_bound
+	ldr	r5, =dac_a_upper_bound
+find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want_lower:
+	ldr	r1, [r0], #4
+	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+	cmp	r1, r2
+	bLO	find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want_lower
+	sub	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+@	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+@	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+@	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+@	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+	str	r3, [r4]
+@		debug	r3
+@		ldr	r1, [r0, #-8]
+@		debug	r1
+find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want_upper:
+	ldr	r1, [r0], #4
+	add	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+	cmp	r1, r2
+	bLS	find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want_upper
+@	sub	r3, r3, #dac_a_to_labrador3_frequency_table_delta
+	str	r3, [r5]
+@		debug	r3
+@		ldr	r1, [r0, #-4]
+@		debug	r1
+	pop	r0-r5
+	return
+
+adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency:
+	@ this version is just a proportional adjustment
+	push	r0-r12	@ bug/future
+	call	find_upper_and_lower_bounds_for_dac_a_values_that_correspond_to_the_frequency_we_want
+	ldr	r1, =frequency_of_LAB3
+	ldr	r1, [r1]
+@	ldr	r1, =average_labrador3_sampling_rate
+@	ldr	r1, [r1]
+	ldr	r0, =sampling_frequency
+	ldr	r0, [r0]
+	ldr	r3, =dac_a_buffered_value
+	ldr	r4, [r3]
+	ldr	r2, =dac_a_lower_bound
+	ldr	r2, [r2]
+	ldr	r5, =dac_a_upper_bound
+	ldr	r5, [r5]
+	cmp	r4, r2
+	cmpHS	r5, r4
+	bHS adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency_okay
+adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency_not_okay:
+	@ reaches here if r4 < r2 or if r5 < r4
+	add	r2, r2, r5
+	mov	r4, r2, lsr #1
+	@ set r4 = (r2 + r5) / 2
+adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency_okay:
+	mov	r5, r4
+	push	r0
+	subS	r0, r0, r1
+@	cmp	r0, #0
+	mvnMI	r0, r0
+	call	find_most_significant_nonzero_bit_position
+	mov	r2, r0
+@		debug_if_changed 	r2
+	@ r2 = log_2(|desired_sampling_frequency-labrador3_sampling_frequency|)
+	pop	r0
+	.ifc	asdf,asd
+	sub	r2, r0, r1
+	@ 3.7B / [(2^14)/4] = 1.6M, so divide by log_2(1.6M) ~21
+	@ want to change at most by about 8000 dac units, which is ~2^13
+	mov	r2, r2, asr #22
+	@ r2 = (signed) adjustment
+	add	r4, r4, r2
+	.else
+	ldr	r6, =1
+@	cmp	r2, #10 @ off by 1 kHz
+@	ldrHI	r6, =1
+@	cmp	r2, #15 @ off by 30 kHz
+@	ldrHI	r6, =0
+	cmp	r2, #18 @ off by 262 kHz
+	ldrLO	r6, =0
+@	cmp	r2, #17 @ off by 131 kHz
+@	ldrLO	r6, =0
+@	cmp	r2, #20 @ off by 1 MHz
+@	ldrHI	r6, =1
+@	cmp	r2, #24 @ off by 16 MHz
+@	ldrHI	r6, =2
+@	cmp	r2, #28 @ off by 256 MHz
+@	ldrHI	r6, =3
+@	cmp	r2, #30 @ off by 1 GHz
+@	ldrHI	r6, =4
+@	mov	r6, r2, lsr #2
+.set	proportionality_constant, 1
+@	ldr	r6, =proportionality_constant
+	cmp	r0, r1
+	addHI	r4, r4, r6
+	subLO	r4, r4, r6
+	.endif
+	ldr	r2, =dac_a_lower_bound
+	ldr	r2, [r2]
+	cmp	r4, r2
+	movLT	r4, r2
+	ldr	r2, =dac_a_upper_bound
+	ldr	r2, [r2]
+	cmp	r4, r2
+	movGT	r4, r2
+	ldr	r2, =dac_a_minimum_allowable_value
+	cmp	r4, r2
+	movLT	r4, r2
+	ldr	r2, =dac_a_maximum_allowable_value
+	cmp	r4, r2
+	movGT	r4, r2
+	str	r4, [r3]
+@		debug_if_changed	r4
+	cmp	r4, r5
+	bEQ	adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency_next
+	call	update_dac_a_from_buffered_value
+@		erase_old_and_redraw_new_integer	address_of_old_value=dac_a_lower_bound, address_of_new_value=dac_a_lower_bound, x_position=15, y_position=18, type_of_value=word, color=green
+@		erase_old_and_redraw_new_integer	address_of_old_value=dac_a_buffered_value, address_of_new_value=dac_a_buffered_value, x_position=15, y_position=30, type_of_value=word, color=green
+@		erase_old_and_redraw_new_integer	address_of_old_value=dac_a_upper_bound, address_of_new_value=dac_a_upper_bound, x_position=15, y_position=42, type_of_value=word, color=green
+adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency_next:
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+display_human_readable_labrador3_frequency:
+	push	r0-r12	@ bug/future
+	ldr	r0, =frequency_of_LAB3
+	ldr	r0, [r0]
+@	ldr	r0, =average_labrador3_sampling_rate
+@	ldr	r0, [r0]
+	call	make_human_readable_from_32bit_i
+@	call	convert_32bit_i_to_string
+	ldr	r0, =human_readable_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =10
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =91
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =green
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+display_human_readable_average_labrador3_frequency:
+	push	r0-r12	@ bug/future
+@	ldr	r0, =frequency_of_LAB3
+@	ldr	r0, [r0]
+	ldr	r0, =average_labrador3_sampling_rate
+	ldr	r0, [r0]
+	call	make_human_readable_from_32bit_i
+@	call	convert_32bit_i_to_string
+	ldr	r0, =human_readable_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =10
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =103
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =blue
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+display_labrador3_frequency:
+	push	r0-r12	@ bug/future
+	ldr	r0, =frequency_of_LAB3
+	ldr	r0, [r0]
+@	ldr	r0, =average_labrador3_sampling_rate
+@	ldr	r0, [r0]
+	call	convert_32bit_i_to_string
+	ldr	r0, =itoa_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =58
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =91
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =green
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+display_average_labrador3_frequency:
+	push	r0-r12	@ bug/future
+@	ldr	r0, =frequency_of_LAB3
+@	ldr	r0, [r0]
+	ldr	r0, =average_labrador3_sampling_rate
+	ldr	r0, [r0]
+	call	convert_32bit_i_to_string
+	ldr	r0, =itoa_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =58
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =103
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =blue
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+clear_accumulated_labrador3_sampling_rate:
+	push	r0-r1
+	ldr	r1, =0
+	ldr	r0, =accumulated_labrador3_sampling_rate__mantissa
+	str	r1, [r0]
+	ldr	r0, =accumulated_labrador3_sampling_rate__exponent
+	str	r1, [r0]
+	ldr	r0, =accumulated_labrador3_sampling_rate__number_of_accumulated_samples
+	strb	r1, [r0]
+	pop	r0-r1
+	return
+
+compute_average_labrador3_sampling_rate:
+	push	r0-r12	@ bug/future
+		ldr	r0, =0x12341234
+@		debug	r0
+		ldr	r0, =accumulated_labrador3_sampling_rate__mantissa
+		ldr	r0, [r0]
+		ldr	r1, =accumulated_labrador3_sampling_rate__exponent
+		ldr	r1, [r1]
+@		debug	r0
+@		debug	r1
+@		sub	r1, r1, #2
+		call	convert_32bit_fl_to_32bit
+@		debug	r0
+	ldr	r0, =accumulated_labrador3_sampling_rate__mantissa
+	ldr	r0, [r0]
+	ldr	r1, =accumulated_labrador3_sampling_rate__exponent
+	ldr	r1, [r1]
+@		ldr	r0, =1411200
+@		ldr	r1, =0
+	sub	r1, r1, #log_base_2_of_number_of_labrador3_sampling_frequencies_to_accumulate
+	call	convert_32bit_fl_to_32bit
+@		debug	r0
+	ldr	r1, =average_labrador3_sampling_rate
+	str	r0, [r1]
+@		debug_if_changed	r0
+	pop	r0-r12	@ bug/future
+	return
+
+accumulate_labrador3_sampling_rate:
+	@ input is r0 = a 32bit integer that is the current lab3 sample rate
+	push	r0-r12	@ bug/future
+@		ldr	r0, =256000000
+@		ldr	r0, =44100
+@		ldr	r0, =4096
+@		ldr	r0, =3
+	call	convert_32bit_to_32bit_fl
+@	call	convert_32bit_fl_to_32bit
+@		ldr	r0, =456000000
+@		ldr	r0, =128000000
+@		ldr	r0, =256000000
+@		ldr	r0, =12800000
+@		ldr	r1, =0
+@		call	convert_32bit_fl_to_32bit_fl
+	ldr	r4, =accumulated_labrador3_sampling_rate__mantissa
+	ldr	r5, =accumulated_labrador3_sampling_rate__exponent
+	ldr	r2, [r4]
+	ldr	r3, [r5]
+@		debug	r0
+@		debug	r1
+@		debug	r2
+@		debug	r3
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@		debug	r0
+@		debug	r1
+@		ldr	r11, =0x67896789
+@		debug	r11
+@		debug	r11
+	str	r0, [r4]
+	str	r1, [r5]
+@		call	convert_32bit_fl_to_32bit
+@		debug	r0
+	ldr	r0, =accumulated_labrador3_sampling_rate__number_of_accumulated_samples
+	ldrb	r1, [r0]
+	inc	r1
+	strb	r1, [r0]
+@		debug	r1
+@		debug	r1
+	cmp	r1, #bit00<<log_base_2_of_number_of_labrador3_sampling_frequencies_to_accumulate
+	bLO	accumulate_labrador3_sampling_rate_done
+	call	compute_average_labrador3_sampling_rate
+@		ldr	r1, =average_labrador3_sampling_rate
+@		ldr	r1, [r1]
+@		debug	r1
+	call	clear_accumulated_labrador3_sampling_rate
+accumulate_labrador3_sampling_rate_done:
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+change_dac_a:
+	push	r0-r12	@ bug/future
+	ldr	r0, =dac_a_buffered_value
+	ldr	r1, [r0]
+@	keep_it_between_unsigned_ping_pong	min=dac_a_minimum_allowable_value, it=r1, max=dac_a_maximum_allowable_value
+	ldr	r2, =dac_a_minimum_allowable_value
+	cmp	r1, r2
+	movLO	r1, r2
+	ldr	r2, =dac_a_maximum_allowable_value
+	cmp	r1, r2
+	movHI	r1, r2
+	ldr	r2, =rotary_encoder_a_signed_delta_stable
+	ldrsb	r2, [r2]
+	ldr	r3, =20
+	mul	r2, r3, r2
+	add	r1, r1, r2
+@	keep_it_between_unsigned_ping_pong	min=dac_a_minimum_allowable_value, it=r1, max=dac_a_maximum_allowable_value
+	ldr	r2, =dac_a_minimum_allowable_value
+	cmp	r1, r2
+	movLO	r1, r2
+	ldr	r2, =dac_a_maximum_allowable_value
+	cmp	r1, r2
+	movHI	r1, r2
+	str	r1, [r0]
+	call	update_dac_a_from_buffered_value
+	pop	r0-r12	@ bug/future
+	return
+
+change_dac_c:
+	push	r0-r12	@ bug/future
+	ldr	r0, =dac_c_buffered_value
+	ldr	r1, [r0]
+@	keep_it_between_unsigned_ping_pong	min=dac_c_minimum_allowable_value, it=r1, max=dac_c_maximum_allowable_value
+	ldr	r2, =dac_c_minimum_allowable_value
+	cmp	r1, r2
+	movLO	r1, r2
+	ldr	r2, =dac_c_maximum_allowable_value
+	cmp	r1, r2
+	movHI	r1, r2
+	ldr	r2, =rotary_encoder_b_signed_delta_stable
+	ldrsb	r2, [r2]
+	ldr	r3, =20
+	mul	r2, r3, r2
+	add	r1, r1, r2
+@	keep_it_between_unsigned_ping_pong	min=dac_c_minimum_allowable_value, it=r1, max=dac_c_maximum_allowable_value
+	ldr	r2, =dac_c_minimum_allowable_value
+	cmp	r1, r2
+	movLO	r1, r2
+	ldr	r2, =dac_c_maximum_allowable_value
+	cmp	r1, r2
+	movHI	r1, r2
+	str	r1, [r0]
+	call	update_dac_c_from_buffered_value
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+acquire_data_from_lab3:
+	push	r0-r12	@ bug/future
+		pulse_general_purpose_output	output=a, saveregs=yes
+@		pulse_general_purpose_output	output=b, saveregs=yes
+	@ set selmain
+	ldr	r1, =bit00<<seltail_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+	ldr	r1, =bit00<<selmain_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset, saveregs=no
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=no
+	@ set channel address
+	ldr	r2, =lab3_channel_address_bus_port
+	ldr	r3, =0b1111<<lab3_channel_address_bus_shift
+	str	r3, [r2, #Clear_Output_Data_Register_offset]
+	@ 0=1faa 1=1f80 2=1faa 3=1f80 4=1f85/1f89/1f8a 5=1f80
+	@ but only when seltail and selmain are 0
+	@ 4=1ffa after touching ch_a to the CAL output
+	@ but then after a while it went to 1ffc/1ffd and then back to 1ffa
+	@ 6=1fe3/1ffc 7=1f80 8=1faa 9=1faa 10=1faa
+	@ after fixing sample address bus port problem:
+	@ 0=0000 1=0000 2=0000
+	@ after fixing something else
+	@ 0=misc 1=0000 2=misc 3=0000 4=misc
+	ldr	r3, =4<<lab3_channel_address_bus_shift
+	str	r3, [r2, #Set_Output_Data_Register_offset]
+	@
+	ldr	r0, =lab3_address_bus_port
+	ldr	r1, =lab3_data_bus_port
+	ldr	r2, =0 @ beginning address
+	ldr	r4, =beginning_of_lab3_buffer_for_channel_a
+@		inc	r2
+	ldr	r6, =0b1111111111111
+acquire_data_from_lab3__next_address:
+	mov	r3, r2, lsl #lab3_address_bus_shift
+	str	r3, [r0, #Output_Data_Status_Register_offset]
+		turn_on_general_purpose_output	output=c, saveregs=yes
+	ldr	r5, [r1, #PIO_Controller_Pin_Data_Status_Register_offset]
+		turn_off_general_purpose_output	output=c, saveregs=yes
+	mov	r5, r5, lsr #lab3_data_bus_shift
+	and	r5, r5, r6
+@		strh	r2, [r4], #2
+	strh	r5, [r4], #2
+@		pulse_general_purpose_output	output=c, saveregs=yes
+	inc	r2
+	cmp	r2, #260
+	bLO	acquire_data_from_lab3__next_address
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+

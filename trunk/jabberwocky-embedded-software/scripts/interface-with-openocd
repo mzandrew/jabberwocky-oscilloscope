@@ -1,0 +1,69 @@
+#!/bin/bash -e
+
+declare telnet_escape_character="%"
+declare -i delay_period="200"
+
+function show_message {
+	# this should use the last known programmed version of the .map file, since the new one might not correspond correctly:
+	local message_address=$(grep ${1} work/jabberwocky.map | awk '{print $1}')
+	echo -n "resume ${message_address}; "
+	echo -n "sleep ${delay_period}; "
+	echo -n "halt; "
+	echo -n "sleep ${delay_period}; "
+}
+
+function erase_all_flash {
+	echo -n "script scripts/openocd/initialize; "
+	echo -n "script scripts/openocd/erase-all-flash; "
+	echo
+}
+
+function program {
+	echo -n "script scripts/openocd/initialize; "
+	show_message programming
+	echo -n "script scripts/openocd/upload-to-flash; "
+	show_message rebooting
+	echo -n "script scripts/openocd/reset; "
+	echo
+}
+
+#	echo -n "script scripts/openocd/exit-telnet-session; "
+function verify {
+	echo -n "script scripts/openocd/initialize; "
+	echo -n "script scripts/openocd/verify; "
+#	show_message verified
+	echo
+}
+
+function dump {
+	echo -n "script scripts/openocd/initialize; "
+	echo -n "script scripts/openocd/dump-ram-contents; "
+	echo -n "script scripts/openocd/resume; "
+	echo
+}
+
+function resume {
+	echo -n "script scripts/openocd/initialize; "
+	echo -n "script scripts/openocd/resume; "
+	echo
+}
+
+function reset {
+	echo -n "script scripts/openocd/initialize; "
+	show_message rebooting
+	echo -n "script scripts/openocd/reset; "
+	echo -n "sleep ${delay_period}; "
+	echo
+}
+#	echo -n "${telnet_escape_character}"
+#	echo -n "${telnet_escape_character}!sleep 1"
+
+function reboot {
+	reset
+}
+
+for each; do
+	${each}
+	${each} | telnet -e ${telnet_escape_character} localhost 4444 || /bin/true
+done
+

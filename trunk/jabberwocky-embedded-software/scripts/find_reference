@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+declare ref=${1}
+
+grep -r ${ref} src/*
+

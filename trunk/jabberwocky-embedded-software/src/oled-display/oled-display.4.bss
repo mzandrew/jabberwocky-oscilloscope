@@ -1,0 +1,8 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+integer_to_render:	.word 0
+
+address_of_current_character_in_string:	.word 0
+
+color:	.word	0
+

@@ -1,0 +1,15 @@
+
+initialize_arm7_for_clock_and_initialize_clock:
+	push	r0-r12	@ bug/future
+	setup_timer_channel_1_to_keep_track_of_partial_seconds
+@ bug/future:  this would benefit from knowing the actual clock rate
+@ bug/future:  but that's a problem if we change the clock rate later...
+	.ifeq	function-clock
+		setup_spi_for_rtc
+	.endif
+@	call	draw_clock_face
+@	call	draw_a_red_border_around_the_screen
+@	call	draw_a_set_of_crosshairs
+	pop	r0-r12	@ bug/future
+	return
+

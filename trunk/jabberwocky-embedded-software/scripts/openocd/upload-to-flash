@@ -1,0 +1,8 @@
+
+flash write_image erase work/jabberwocky.hex 0 ihex
+sleep 200
+script scripts/openocd/verify
+sleep 200
+#mww 0xfffffc30 0x00000001
+sleep 200
+

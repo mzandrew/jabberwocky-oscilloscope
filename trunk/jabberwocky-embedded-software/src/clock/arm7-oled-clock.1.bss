@@ -1,0 +1,67 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+address_of_spi_rtc_to_read_block:	.byte 0
+
+hand_length:	.byte 0
+hand_width:	.byte 0
+
+clock_face_mode:	.byte 0
+
+current_x_position_of_end_of_hand: .byte 0
+current_y_position_of_end_of_hand: .byte 0
+
+old_x_position_of_end_of_hour_hand:	.byte 0
+old_y_position_of_end_of_hour_hand:	.byte 0
+current_x_position_of_end_of_hour_hand: .byte 0
+current_y_position_of_end_of_hour_hand: .byte 0
+
+old_x_position_of_end_of_minute_hand:	.byte 0
+old_y_position_of_end_of_minute_hand:	.byte 0
+current_x_position_of_end_of_minute_hand: .byte 0
+current_y_position_of_end_of_minute_hand: .byte 0
+
+old_x_position_of_end_of_second_hand:	.byte 0
+old_y_position_of_end_of_second_hand:	.byte 0
+current_x_position_of_end_of_second_hand: .byte 0
+current_y_position_of_end_of_second_hand: .byte 0
+
+@.align 2
+get_clock_block:
+dummy_read:	.byte	0
+clock_raw_bcd_seconds:	.byte	0
+clock_raw_bcd_seconds_offset = clock_raw_bcd_seconds - get_clock_block
+clock_raw_bcd_minutes:	.byte	0
+clock_raw_bcd_hours_and_am_pm:	.byte	0
+clock_raw_bcd_day_of_week:	.byte	0
+clock_raw_bcd_day_of_month:	.byte	0
+clock_raw_bcd_month:	.byte	0
+clock_raw_bcd_year:	.byte	0
+
+@.align 2
+bcd_time_of_day:	@ this is what's currently displayed on the clock face (to compare against the current time above
+@ to see if the display needs to be updated)
+clock_bcd_seconds:	.byte	0
+clock_bcd_minutes:	.byte	0
+clock_bcd_hours:	.byte	0
+clock_bcd_day_of_week:	.byte	0
+clock_bcd_day_of_month:	.byte	0
+clock_bcd_month_of_year:	.byte	0
+clock_bcd_year:	.byte	0
+clock_bcd_am_pm:	.byte	0
+
+@.align 2
+time_of_day:	@ this is what's currently displayed on the clock face (to compare against the current time above
+@ to see if the display needs to be updated)
+clock_seconds:	.byte	0
+clock_minutes:	.byte	0
+clock_hours:	.byte	0
+clock_day_of_week:	.byte	0
+clock_day_of_month:	.byte	0
+clock_month_of_year:	.byte	0
+clock_year:	.byte	0
+clock_am_pm:	.byte	0
+
+clock_tenths_of_seconds:	.byte 0
+
+seconds_have_changed:	.byte 0
+

@@ -1,0 +1,225 @@
+
+@	add	er2, r2, #bit00<<1	@ stop
+@	add	er2, r2, #bit00<<2	@ master enabled as long as "master disabled" is not set (below)
+@	add	er2, r2, #bit00<<3	@ master disabled
+
+@ ============================================================================
+
+.macro	wait_for_TWI_TXRDY	TWI_register, temporary_register_1, temporary_register_2
+	ldr	\temporary_register_2, =bit00<<2 @ TXRDY
+0:	ldr	\temporary_register_1, [\TWI_register, #TWI_Status_Register_offset]
+	tst	\temporary_register_1, \temporary_register_2
+	bEQ	0b
+.endm
+
+.macro	wait_for_TWI_RXRDY	TWI_register, temporary_register_1, temporary_register_2
+	ldr	\temporary_register_2, =bit00<<1 @ RXRDY
+0:	ldr	\temporary_register_1, [\TWI_register, #TWI_Status_Register_offset]
+	tst	\temporary_register_1, \temporary_register_2
+	bEQ	0b
+.endm
+
+.macro	wait_for_TWI_TXCOMP	TWI_register, temporary_register_1, temporary_register_2
+	ldr	\temporary_register_2, =bit00<<0 @ TXCOMP
+0:	ldr	\temporary_register_1, [\TWI_register, #TWI_Status_Register_offset]
+	tst	\temporary_register_1, \temporary_register_2
+	bEQ	0b
+.endm
+
+@ ============================================================================
+
+i2c_read_a_byte:
+	@ this function modifies r0 !
+	@ this function requires r3 = the address of the source i2c device
+	push	r1-r3
+	ldr	r0, =TWI
+	mov	r1, r3, lsl #16
+	ldr	r2, =bit00
+	add	r1, r1, r2, lsl #12	@ set this bit for master=read mode; otherwise master=write mode
+	str	r1, [r0, #TWI_Master_Mode_Register_offset]
+	@ tell it to start:
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ start
+	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+	str	r2, [r0, #TWI_Control_Register_offset]
+	wait_for_TWI_RXRDY	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	@ read the data:
+	ldr	r3, [r0, #TWI_Receive_Holding_Register_offset]
+	wait_for_TWI_TXCOMP	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	mov	r0, r3
+	pop	r1-r3
+	return
+
+i2c_write_a_byte:
+	@ this function requires r3 = the address of the destination i2c device
+	@ this function requires r4 = the data to send
+	push	r0-r3
+	ldr	r0, =TWI
+	mov	r1, r3, lsl #16 @ destination i2c device (external) address
+@	ldr	r2, =bit00
+@	add	r1, r1, r2, lsl #12	@ set this bit for master=read mode; otherwise master=write mode
+	str	r1, [r0, #TWI_Master_Mode_Register_offset]
+	@ tell it to start:
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ start
+	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+	str	r2, [r0, #TWI_Control_Register_offset]
+	@ send a byte:
+	str	r4, [r0, #TWI_Transmit_Holding_Register_offset]
+	wait_for_TWI_TXRDY	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	wait_for_TWI_TXCOMP	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	pop	r0-r3
+	return
+
+i2c_read_a_byte_with_internal_address:
+	@ this function modifies r0 !
+	@ this function requires r3 = the address of the source i2c device
+	@ this function requires r4 = the internal address of the source i2c device
+	push	r1-r4
+	ldr	r0, =TWI
+	@ enable master
+	ldr	r2, =bit00<<2	@ master enabled as long as "master disabled" bit is not set
+	str	r2, [r0, #TWI_Control_Register_offset]
+	@ set device address, read mode, use a 1 byte internal address
+	mov	r1, r3, lsl #16 @ device address
+	add	r1, r1, #bit00<<12	@ set this bit for master=read mode; otherwise master=write mode
+@	ldr	r2, =0	@ no internal address
+	ldr	r2, =1	@ one byte internal address
+@	ldr	r2, =2	@ two byte internal address
+@	ldr	r2, =3	@ three byte internal address
+	add	r1, r1, r2, lsl #8	@ number of bytes of internal address
+	str	r1, [r0, #TWI_Master_Mode_Register_offset]
+	@ set internal address
+	str	r4, [r0, #TWI_Internal_Address_Register_offset]
+	@ tell it to start:
+@	ldr	r2, =bit00<<0	@ start
+	ldr	r2, =bit00<<0 | bit00<<1	@ start & stop
+	str	r2, [r0, #TWI_Control_Register_offset]
+	wait_for_TWI_RXRDY	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	@ read the data:
+	ldr	r3, [r0, #TWI_Receive_Holding_Register_offset]
+@	@ tell it to stop:
+@	ldr	r2, =bit00<<1	@ stop
+@	str	r2, [r0, #TWI_Control_Register_offset]
+	wait_for_TWI_TXCOMP	TWI_register=r0, temporary_register_1=r1, temporary_register_2=r2
+	mov	r0, r3
+	pop	r1-r4
+	return
+
+i2c_write_a_byte_with_internal_address:
+	@ this function requires r3 = the address of the destination i2c device
+	@ this function requires r4 = the internal address of the destination i2c device
+	@ this function requires r5 = the first byte to be written
+	push	r0-r4
+		mov	r0, r3
+		mov	r1, r4
+		mov	r2, r5
+	ldr	r4, =TWI
+	@ r0 = the address of the destination i2c device / control register value to be written
+	@ r1 = the internal address of the destination i2c device
+	@ r2 = the first byte to be written
+	@@ r3 = the second byte to be written
+	@ r4 = TWI
+	mov	r0, r0, lsl #16
+@	add	r0, r0, #bit00<<12	@ set this bit for master=read mode; otherwise master=write mode
+@	add	r0, r0, #0<<8	@ 0 bytes of internal address
+	add	r0, r0, #1<<8	@ 1 byte  of internal address
+@	add	r0, r0, #2<<8	@ 2 bytes of internal address
+@	add	r0, r0, #3<<8	@ 3 bytes of internal address
+	str	r0, [r4, #TWI_Master_Mode_Register_offset]
+	str	r1, [r4, #TWI_Internal_Address_Register_offset]
+	@ setup a byte to send:
+	str	r2, [r4, #TWI_Transmit_Holding_Register_offset]
+	@ tell it to start:
+	ldr	r0, =0
+	add	r0, r0, #bit00<<0	@ start
+	add	r0, r0, #bit00<<1	@ stop
+@	add	r0, r0, #bit00<<2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r0, r0, #bit00<<3	@ master disabled
+	str	r0, [r4, #TWI_Control_Register_offset]
+	@ check to see that it's still working:
+	ldr	r0, =bit00<<2	@ TXRDY
+i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_transmitting:
+	ldr	r1, [r4, #TWI_Status_Register_offset]
+	tst	r0, r1
+	bEQ	i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_transmitting
+	@ wait for it to finish the transmission sequence:
+	ldr	r0, =bit00<<0	@ TXCOMP
+i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_sequence:
+	ldr	r1, [r4, #TWI_Status_Register_offset]
+	tst	r0, r1
+	bEQ	i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_sequence
+	pop	r0-r4
+	return
+
+i2c_write_two_bytes_with_internal_address:
+	@ this function requires r3 = the address of the destination i2c device
+	@ this function requires r4 = the internal address of the destination i2c device
+	@ this function requires r5 = the first byte to be written
+	@ this function requires r6 = the second byte to be written
+	push	r0-r4
+		mov	r0, r3
+		mov	r1, r4
+		mov	r2, r5
+		mov	r3, r6
+	ldr	r4, =TWI
+	@ r0 = the address of the destination i2c device / control register value to be written
+	@ r1 = the internal address of the destination i2c device
+	@ r2 = the first byte to be written
+	@ r3 = the second byte to be written
+	@ r4 = TWI
+	mov	r0, r0, lsl #16
+@	add	r0, r0, #bit00<<12	@ set this bit for master=read mode; otherwise master=write mode
+@	add	r0, r0, #0<<8	@ 0 bytes of internal address
+	add	r0, r0, #1<<8	@ 1 byte  of internal address
+@	add	r0, r0, #2<<8	@ 2 bytes of internal address
+@	add	r0, r0, #3<<8	@ 3 bytes of internal address
+	str	r0, [r4, #TWI_Master_Mode_Register_offset]
+	str	r1, [r4, #TWI_Internal_Address_Register_offset]
+	@ setup a byte to send:
+	str	r2, [r4, #TWI_Transmit_Holding_Register_offset]
+	@ tell it to start:
+	ldr	r0, =0
+	add	r0, r0, #bit00<<0	@ start
+@	add	r0, r0, #bit00<<1	@ stop
+@	add	r0, r0, #bit00<<2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r0, r0, #bit00<<3	@ master disabled
+	str	r0, [r4, #TWI_Control_Register_offset]
+	@ check to see that it's still working:
+	ldr	r0, =bit00<<2	@ TXRDY
+i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_transmitting_1:
+	ldr	r1, [r4, #TWI_Status_Register_offset]
+	tst	r0, r1
+	bEQ	i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_transmitting_1
+	@ setup a second byte to send:
+	str	r3, [r4, #TWI_Transmit_Holding_Register_offset]
+	@ check to see that it's still working:
+	ldr	r0, =bit00<<2	@ TXRDY
+i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_transmitting_2:
+	ldr	r1, [r4, #TWI_Status_Register_offset]
+	tst	r0, r1
+	bEQ	i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_transmitting_2
+	@ tell it to stop:
+	ldr	r0, =0
+@	add	r0, r0, #bit00<<0	@ start
+	add	r0, r0, #bit00<<1	@ stop
+@	add	r0, r0, #bit00<<2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r0, r0, #bit00<<3	@ master disabled
+	str	r0, [r4, #TWI_Control_Register_offset]
+	@ wait for it to finish the transmission sequence:
+	ldr	r0, =bit00<<0	@ TXCOMP
+i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_sequence:
+	ldr	r1, [r4, #TWI_Status_Register_offset]
+	tst	r0, r1
+	bEQ	i2c_write_two_bytes_with_internal_address__wait_for_twi_to_finish_sequence
+	pop	r0-r4
+	return
+
+@ ============================================================================
+

@@ -1,0 +1,13 @@
+.data	@ non-zero initialized ram variables (gets stored in flash; must be copied to ram)
+
+background_color:	.word default_background_color
+
+hour_hand_color:	.word default_hour_hand_color
+minute_hand_color:	.word default_minute_hand_color
+second_hand_color:	.word default_second_hand_color
+
+line_color:	.word default_line_color
+
+font_color:	.word default_font_color
+
+

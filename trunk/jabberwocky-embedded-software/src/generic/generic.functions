@@ -1,0 +1,414 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+show_master_clock_frequency:
+	push	r0-r12 @ bug/future
+	ldr	r0, =master_clock_frequency
+	ldr	r0, [r0]
+	call	convert_hexadecimal_to_BCD
+	ldr	r1, =current_master_clock_frequency
+	str	r0, [r1]
+	erase_old_and_redraw_new_BCD_integer	address_of_old_value=previous_master_clock_frequency, address_of_new_value=current_master_clock_frequency, x_position=33, y_position=54, type_of_value=word, color=blue
+	ldr	r0, =current_master_clock_frequency
+	ldr	r0, [r0]
+	ldr	r1, =previous_master_clock_frequency
+	str	r0, [r1]
+	pop	r0-r12 @ bug/future
+	return
+
+@ ============================================================================
+
+.ifne	shutdown_controller_available
+shutdown:
+	call	turn_off_2.5V_supply
+	call	turn_off_Vdisplay
+	@ this disables the +-5V regulators
+	call	turn_on_plus_and_minus_5V_supplies
+@@	call	turn_off_plus_and_minus_5V_supplies
+	@ the following tells the microcontroller to turn itself off (basically)
+	@ and bring the shutdown# pin to an active state (low)
+	@ the active shutdown# pin disables the 3.3V regulator
+	@ the display voltage enable line is one of the general purpose i/o pins
+	@ on the microcontroller, so when it loses power, the dislpay voltage
+	@ DC-DC converter becomes inactive
+	ldr	r0, =SHDW
+	ldr	r1, =0xa5000001
+	str	r1, [r0, #SHDW_Control_Register_offset]
+	return
+.endif
+
+@.unwind_fnstart
+@.unwind_fnend
+@.func	turn_off_led__asm
+@.endfunc
+
+@ ============================================================================
+
+.type	turn_off_led__asm,#function
+turn_off_led__asm:
+	turn_off_led	saveregs=yes
+
+	mov	pc, lr
+
+.type	turn_on_led__asm,#function
+turn_on_led__asm:
+	turn_on_led	saveregs=yes
+
+	mov	pc, lr
+
+@ ============================================================================
+
+.global	programming
+programming:
+	call	clear_display
+	wait_for_n_milliseconds	n=2
+	ldr	r0, =programming_string
+	call	display_a_centered_string
+	wait_indefinitely
+
+.global	verified
+verified:
+	call	clear_display
+	wait_for_n_milliseconds	n=2
+	ldr	r0, =verified_string
+	call	display_a_centered_string
+	wait_indefinitely
+
+.global	rebooting
+rebooting:
+	call	clear_display
+	wait_for_n_milliseconds	n=2
+	ldr	r0, =rebooting_string
+	call	display_a_centered_string
+	reset_device
+
+@ ============================================================================
+
+convert_hexadecimal_to_BCD:
+	@ input and output register is r0
+	push	r1-r4
+	convert_hexadecimal_to_BCD_macro
+	pop	r1-r4
+	return
+
+convert_hexadecimal_to_BCD_divide_by_1000:
+	@ input and output register is r0
+	push	r1-r4
+	convert_hexadecimal_to_BCD_macro_divide_by_1000
+	pop	r1-r4
+	return
+
+@ ============================================================================
+
+find_most_significant_nonzero_bit_position:
+	@ takes r0 and modifies it to be the number of the most significant non-zero bit
+	@ 0-31 means that is the bit number
+	@ 32 means all bits are zero
+	push	r1-r3
+	cmp	r0, #0
+	ldrEQ	r2, =32
+	bEQ	find_most_significant_nonzero_bit_position_done
+	mov	r2, r0 @ r2 = original value of r0
+	call	find_most_significant_nonzero_nibble
+	mov	r3, r0, lsl #2 @ convert from nibble # to rought bit # (aliased to a nibble)
+	mov	r0, r2, lsr r3 @ so that we're working on the most significant nibble
+	call	find_most_significant_nonzero_bit_of_first_nibble
+	add	r2, r0, r3 @ [0,31] = [0,3] + [0,28] = [0,3] + 4 * [0,7]
+find_most_significant_nonzero_bit_position_done:
+	mov	r0, r2
+	pop	r1-r3
+	return
+
+find_most_significant_nonzero_bit_of_first_nibble:
+	@ takes r0 and modifies it to be the number of the most significant non-zero bit in the first nibble
+	@ 0-3 means that is the bit number
+	@ 4 means all bits in first nibble are zero
+	push	r1-r2
+	@cmp	r0, #0
+	tst	r0, #0b1111
+	ldrEQ	r2, =4
+	bEQ	find_most_significant_nonzero_bit_of_first_nibble_done
+	ldr	r1, =1
+	ldr	r2, =3
+	tst	r0, r1, lsl r2
+	bNE	find_most_significant_nonzero_bit_of_first_nibble_done
+	dec	r2
+	tst	r0, r1, lsl r2
+	bNE	find_most_significant_nonzero_bit_of_first_nibble_done
+	dec	r2
+	tst	r0, r1, lsl r2
+	bNE	find_most_significant_nonzero_bit_of_first_nibble_done
+	dec	r2
+find_most_significant_nonzero_bit_of_first_nibble_done:
+	mov	r0, r2
+	pop	r1-r2
+	return
+
+find_most_significant_nonzero_nibble:
+	@ takes r0 and modifies it to be the number of the most significant non-zero nibble
+	@ 0-7 means that is the nibble number
+	@ 8 means all nibbles are zero
+	@ simple, inefficient version just steps through nibbles instead of binarily searching
+	push	r1-r2
+	cmp	r0, #0
+	ldrEQ	r2, =32
+	bEQ	find_most_significant_nonzero_nibble_done2
+	ldr	r2, =4
+	movS	r1, r0, lsr r2
+	bEQ	find_most_significant_nonzero_nibble_done
+	add	r2, r2, #4
+find_most_significant_nonzero_nibble_next:
+	movS	r1, r0, lsr r2
+	bEQ	find_most_significant_nonzero_nibble_done
+	add	r2, r2, #4
+	cmp	r2, #32
+	bLO	find_most_significant_nonzero_nibble_next
+find_most_significant_nonzero_nibble_done:
+	sub	r2, r2, #4
+find_most_significant_nonzero_nibble_done2:
+	mov	r0, r2, lsr #2
+	pop	r1-r2
+	return
+
+@ ============================================================================
+
+convert_BCD_quantity_of_milliAmps_to_string_and_display_it:
+	push	r0-r3
+	ldr	r1, =beginning_of_temporary_string_8_characters
+	ldr	r2, =address_of_current_character_in_string
+	str	r1, [r2]
+	push	r0
+	call	find_most_significant_nonzero_nibble
+	cmp	r0, #8
+	ldrEQ	r0, =0 @ "0mA"
+	mov	r2, r0, lsl #2
+@	cmp	r0, #0
+@	addEQ	r2, r2, #4	@ prepend leading zero if less than 1.0mA "0.8mA"
+	pop	r0
+	@ r0 = original input register = 0x00000123 for "123mA" (for example)
+	@ r1 = beginning_of_temporary_string_8_characters
+	@ r2 = shift amount "counter"
+	@ r3 = current nibble being processed
+convert_BCD_quantity_of_milliAmps_to_string_and_display_it_next:
+	mov	r3, r0, lsr r2
+	and	r3, r3, #0b1111 @ r3 = nibble in question
+	add	r3, r3, #48	@ decimal numbers
+	strb	r3, [r1], #1
+@		debug	r3
+	sub	r2, r2, #4
+	cmp	r2, #0
+	bGE	convert_BCD_quantity_of_milliAmps_to_string_and_display_it_next
+@	ldr	r3, ='.
+@	strb	r3, [r1], #1
+@		debug	r3
+@@	mov	r3, r0, lsr r2
+@@	and	r3, r3, #0b1111 @ r3 = nibble in question
+@@	add	r3, r3, #48	@ decimal numbers
+@@	strb	r3, [r1], #1
+@		debug	r3
+	ldr	r3, ='m
+	strb	r3, [r1], #1
+	ldr	r3, ='A
+	strb	r3, [r1], #1
+	ldr	r3, =' 
+	strb	r3, [r1], #1
+	ldr	r3, =' 
+	strb	r3, [r1], #1
+@		debug	r3
+	ldr	r3, =0
+	strb	r3, [r1], #1
+@		debug	r3
+	call	display_a_string @ "123mA" (for example)
+	pop	r0-r3
+	return
+
+convert_BCD_quantity_of_deciVolts_to_string_and_display_it:
+	push	r0-r3
+	ldr	r1, =beginning_of_temporary_string_8_characters
+	ldr	r2, =address_of_current_character_in_string
+	str	r1, [r2]
+	push	r0
+	call	find_most_significant_nonzero_nibble
+	cmp	r0, #8
+	ldrEQ	r0, =0 @ "0.0V"
+	movS	r2, r0, lsl #2
+	addEQ	r2, r2, #4	@ prepend leading zero if less than 1.0V "0.8V"
+	pop	r0
+	@ r0 = original input register = 0x00000123 for "12.3V" (for example)
+	@ r1 = beginning_of_temporary_string_8_characters
+	@ r2 = shift amount "counter"
+	@ r3 = current nibble being processed
+convert_BCD_quantity_of_deciVolts_to_string_and_display_it_next:
+	mov	r3, r0, lsr r2
+	and	r3, r3, #0b1111 @ r3 = nibble in question
+	add	r3, r3, #48	@ decimal numbers
+	strb	r3, [r1], #1
+@		debug	r3
+	sub	r2, r2, #4
+	cmp	r2, #4
+	bGE	convert_BCD_quantity_of_deciVolts_to_string_and_display_it_next
+	ldr	r3, ='.
+	strb	r3, [r1], #1
+@		debug	r3
+	mov	r3, r0, lsr r2
+	and	r3, r3, #0b1111 @ r3 = nibble in question
+	add	r3, r3, #48	@ decimal numbers
+	strb	r3, [r1], #1
+@		debug	r3
+	ldr	r3, ='V
+	strb	r3, [r1], #1
+@		debug	r3
+@	ldr	r3, =' 
+@	strb	r3, [r1], #1
+	ldr	r3, =0
+	strb	r3, [r1], #1
+@		debug	r3
+	call	display_a_string @ "12.3V" (for example)
+	pop	r0-r3
+	return
+
+@ ============================================================================
+
+itoa:
+
+convert_32bit_ui_to_string:
+	@ input is r0 = 32 bit unsigned integer
+	@ output is atoi_string
+	push	r0-r12	@ bug/future
+	ldr	r4, =itoa_string
+	call	convert_32bit_i_to_string__inner_function
+	pop	r0-r12	@ bug/future
+	return
+
+convert_32bit_si_to_string:
+	@ input is r0 = 32 bit signed integer
+	@ output is atoi_string
+	push	r0-r12	@ bug/future
+	ldr	r4, =itoa_string
+	cmp	r0, #0
+	bPL convert_32bit_si_to_string__ready
+	ldr	r1, ='-
+	strb	r1, [r4], #1
+	rsb	r0, #0
+convert_32bit_si_to_string__ready:
+	call	convert_32bit_i_to_string__inner_function
+	pop	r0-r12	@ bug/future
+	return
+
+convert_32bit_i_to_string__inner_function:
+	@ input is r0 = 32 bit integer
+	@ output is atoi_string
+	@ this does not save registers, so it must be used within a function that does so
+	ldr	r3, ='0 @ ascii for zero
+	ldr	r5, =0
+	@ r5 = flag for the inverse of whether we're still in the leading zeros
+	@      and then it's the current significant digit counter
+	itoa_inner_macro	place=1000000000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=100000000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=10000000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=1000000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=100000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=10000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=1000,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=100,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	itoa_inner_macro	place=10,input_register=r0,result_register=r1,temporary_register=r2, ascii_0_register=r3, output_string_register=r4, leading_zero_slash_counter_register=r5
+	@ the following is different because we need to make sure there's at least a "0" in the output string
+	convert_hexadecimal_to_a_partial_decimal_nibble	place=1,input_register=r0,result_register=r1,temporary_register=r2
+	cmp	r5, #0
+	cmpEQ	r1, #0
+	addNE	r5, r5, #1
+	add	r1, r1, r3
+	strb	r1, [r4], #1
+	ldr	r1, =0 @ ascii for null
+	strb	r1, [r4], #1
+	return
+
+make_human_readable_from_32bit_i:
+	@ input is r0 = 32 bit integer
+	@ output is human_readable_string
+	@ if the input is less than 3 digits, the result will not have trailing zeroes
+	@ because it copies the null terminator and possibly past that
+	push	r0-r12	@ bug/future
+	call	convert_32bit_ui_to_string
+	ldr	r0, =itoa_string
+	ldr	r1, =0
+make_human_readable_from_32bit_i_next:
+	ldrb	r2, [r0], #1
+	inc	r1
+	cmp	r2, #0
+	bNE	make_human_readable_from_32bit_i_next
+	subS	r1, r1, #1
+		ldrMI	r2, =human_readable_string
+		bMI	make_human_readable_from_32bit_i_done
+@		debug_if_changed	r1
+	@ r1 = number of digits in string
+	@    "8000" -> 4 -> "8.00k"
+	@   "24000" -> 5 -> "24.0k"
+	@  "240000" -> 6 ->  "240k"
+	@ "2400000" -> 7 -> "2.40M"
+	ldr	r4, =0
+	cmp	r1, #4
+	ldrHS	r4, ='k
+	cmp	r1, #7
+	ldrHS	r4, ='M
+	cmp	r1, #10
+	ldrHS	r4, ='G
+	cmp	r1, #4
+	subHS	r1, r1, #3
+	cmp	r1, #4
+	subHS	r1, r1, #3
+	cmp	r1, #4
+	subHS	r1, r1, #3
+@		debug_if_changed	r1
+	@ r4 = 0, "k", "M" or "G"
+	@ r1 = 1 for "8.00"
+	@ r1 = 2 for "24.0"
+	@ r1 = 3 for  "240"
+	@ r1 = 1 for "2.40"
+	ldr	r0, =itoa_string
+	ldr	r2, =human_readable_string
+	ldrb	r3, [r0], #1
+	strb	r3, [r2], #1
+	sub	r1, r1, #1
+	@ first digit is rendered
+	@ r1 = 0 for "8" ".00"
+	@ r1 = 1 for "2" "4.0"
+	@ r1 = 2 for "2" "40"
+	@ r1 = 0 for "2" ".40"
+	ldr	r5, ='.
+	cmp	r1, #0
+	strEQb	r5, [r2], #1
+	@ optional decimal point is rendered
+	@ r1 = 0 for "8." "00"
+	@ r1 = 1 for "2" "4.0"
+	@ r1 = 2 for "2" "40"
+	@ r1 = 0 for "2." "40"
+	ldrb	r3, [r0], #1
+	strb	r3, [r2], #1
+	@ second digit is rendered
+	@ r1 = 0 for "8.0" "0"
+	@ r1 = 1 for "24" ".0"
+	@ r1 = 2 for "24" "0"
+	@ r1 = 0 for "2.4" "0"
+	dec	r1
+	strEQb	r5, [r2], #1
+	@ optional decimal point is rendered
+	@ r1 = -1 for "8." "0"
+	@ r1 =  0 for "24." "0"
+	@ r1 =  1 for "2" "0"
+	@ r1 = -1 for "2." "0"
+	ldrb	r3, [r0], #1
+	strb	r3, [r2], #1
+	cmp	r4, #0
+	strNEb	r4, [r2], #1
+make_human_readable_from_32bit_i_done:
+	ldr	r5, =0
+	strb	r5, [r2], #1
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+

@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+declare options=${@}
+
+echo $(./scripts/wc_src ${options} | sed -e "s,[^0-9]\([0-9]\+\)[^0-9]\+\([0-9]\+\)[^0-9]\+\([0-9]\+\)[^0-9]*.*,a+=\1; b+=\2; c+=\3; ,") | sed -e "s/$/print a, \" \", b, \" \", c, \"\n\"/" | bc
+# | sed -e "s,+$,," 
+#
+

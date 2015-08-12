@@ -1,0 +1,68 @@
+arm-elf-as:
+-k generate position independent code (so it can be copied into ram)
+
+.align 2 means align to a 4-byte boundary
+.align 1 means align to a 2-byte boundary
+
+the listing addresses (work/jabberwocky.listing) are different from the debugger addresses by the size of the exceptions-blah.o block, which is 32d or 20h (so a actual address of 5c2c is 5c0c in the listing file)
+
+2009-03-18 openocd-1200:
+openocd stopped segfaulting after (among a few other things) shortening the length of the lines in the echo "blah" | telnet scripts (by changing filenames from scripts/blah.openocd-script to scripts/openocd/blah
+
+2009-03-20:
+
+connected ambient light sensor analog input to output from channel A of the analog input stage
+
+fixed wiring of current sense amplifiers
+
+believe that the miswired current sense amplifiers were the reason the 3.3V regulator never really went into shutdown and the display and leds stayed partially lit
+nope.  turning off the +-5V supplies is what keeps it from really shutting down
+and the display is still on just a little bit even when the leds go off
+
+accidentally discharged lipoly battery to 2.2V
+
+2009-03-21
+
+vdisplay is 3.72V when it's supposed to be off entirely
+this is probably
+caused by the soft-start functionality and the microcontroller's pull-ups
+being enabled and 3.3V not really being zero at the same time
+vdisplay-enable is 2.5V when it's one and 0.16V when off
+
+3.3V is 1.223V when it's supposed to be off entirely
+
+2.5V is 2.536V
+2.5V-enable is 3.3V when on and 0.8V when off
+
+2009-02-25
+removed mww 0xfffffc30 0x01 from scripts/openocd/initialize and it wouldn't program/verify properly, so this implies that the flash write mode must be set more carefully when running the pll above the regular oscillator freq (or maybe it just has to run from the osc when flashing) - was getting memory aborts, which (in openocd's terminal) always give a false 0x00000000 before the actual data when doing a mdw 0x100000 8 for instance
+
+rot1 = rotary encoder a
+rot2 = rotary encoder b
+
+2009-04-04
+wrote floating point multiply routines
+
+2009-04-09
+soldered labrador3 down
+got RCO to have a period of 512ns
+
+2009-04-16
+removed amplifiers because they get too hot
+display no longer works
+found appropriate voltage for dac c and voltage range for dac a to control lab3/RCO without glitches
+soldered down new amplifiers (which seem to get just about as hot)
+
+2009-04-18
+display works fine in clock/oscilloscope prototype
+can now get (only) 1/2 of display to light up, top half or bottom half, depending on something that's seemingly random
+tried erase_all_flash, but no luck
+
+2009-04-21
+checked all display lines.  tried manually pulsing display reset line and the reset uC and then it worked fine.  Wired it to PA14 (pin 45) of the uC and added code to hold it low for a while just after setting up other display control lines.
+wrote software to come up with a look up table to correlate dac a values with lab3 frequencies so it can be searched to limit feedback range
+
+2009-06-30
+after running all night, it got stuck in the loop named:
+wait_for_the_end_of_the_first_part_of_the_trigger_delay_next
+

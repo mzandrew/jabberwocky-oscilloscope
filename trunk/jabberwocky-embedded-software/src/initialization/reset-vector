@@ -1,0 +1,48 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+.global reset_vector
+reset_vector:
+	msr	cpsr, #0b0010000	@ switch to user mode with irq and fiq disabled
+	ldr	sp, =top_of_stack
+
+	.ifeq	old_mode-test_trigger_delay
+		test_trigger_delay_macro
+	.endif
+
+	initialize_everything
+@	call	show_master_clock_frequency
+
+	.ifeq	old_mode-normal
+@		activate_display_write
+		b	main_loop
+	.else
+		.ifeq	old_mode-test_twi
+			b	main_loop
+		.else
+			wait_indefinitely
+		.endif
+	.endif
+
+@	show_test_paragraph
+
+	mypool
+
+@	b	main_loop
+
+@	test_trigger_delay_macro2
+
+	.ifeq	old_mode-normal
+		b	main_loop
+	.else
+		.ifeq	old_mode-test_twi
+			b	main_loop
+		.else
+			wait_indefinitely
+		.endif
+	.endif
+
+reset_vector_done:
+	b	main_loop
+

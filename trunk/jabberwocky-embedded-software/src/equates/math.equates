@@ -1,0 +1,152 @@
+
+.ifne	need_sine_and_cosine_lookup_table
+.set	size_of_sine_lookup_table_in_words, 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table
+.set	size_of_cosine_lookup_table_in_words, 1<<log_base_2_of_four_fifths_of_the_size_of_the_lookup_table
+.set	size_of_entire_lookup_table_in_words, 5<<(log_base_2_of_four_fifths_of_the_size_of_the_lookup_table-2)
+.set	beginning_of_sine_lookup_table, lookup_table
+.set	end_of_sine_lookup_table, beginning_of_sine_lookup_table+2*(size_of_sine_lookup_table_in_words-1)
+.set	beginning_of_cosine_lookup_table, just_after_end_of_lookup_table-2*(size_of_cosine_lookup_table_in_words-1)-2
+.set	end_of_cosine_lookup_table, beginning_of_cosine_lookup_table+2*(size_of_cosine_lookup_table_in_words-1)
+.endif
+
+.ifne	need_sine_and_cosine_lookup_table
+@.set	pi_fp, (314159 * 1<<fixed_point_shift_by) / 100000
+@.set	two_pi_fp, (628319 * 1<<fixed_point_shift_by) / 100000
+.ifeq	fixed_point_shift_by-11
+	.set	pi_fp, 6434
+	.set	two_pi_fp, 12868
+.endif
+.ifeq	fixed_point_shift_by-12
+	.set	pi_fp, 12868
+	.set	two_pi_fp, 25736
+.endif
+.ifeq	fixed_point_shift_by-13
+	.set	pi_fp, 25736
+	.set	two_pi_fp, 51472
+.endif
+.ifeq	fixed_point_shift_by-14
+	.set	pi_fp, 51472
+	.set	two_pi_fp, 102944
+.endif
+.ifeq	fixed_point_shift_by-15
+	.set	pi_fp, 102944
+	.set	two_pi_fp, 205887
+.endif
+.endif
+
+.set	fixed_point__one, (1<<fixed_point_shift_by)
+
+.set	fixed_point__zero_point_500000, (50000<<fixed_point_shift_by)/100000
+.set	fixed_point__zero_point_200000, 2*fixed_point__zero_point_500000/5
+.set	fixed_point__zero_point_100000, fixed_point__zero_point_500000/5
+.set	fixed_point__zero_point_050000, (5000<<fixed_point_shift_by)/100000
+.set	fixed_point__zero_point_020000, 2*fixed_point__zero_point_050000/5
+.set	fixed_point__zero_point_010000, fixed_point__zero_point_050000/5
+.set	fixed_point__zero_point_005000, (500<<fixed_point_shift_by)/100000
+.set	fixed_point__zero_point_002000, 2*fixed_point__zero_point_005000/5
+.set	fixed_point__zero_point_001000, fixed_point__zero_point_005000/5
+.set	fixed_point__zero_point_000500, (50<<fixed_point_shift_by)/100000
+.set	fixed_point__zero_point_000200, 2*fixed_point__zero_point_000500/5
+.set	fixed_point__zero_point_000100, fixed_point__zero_point_000500/5
+
+@.set	inverse_of_zero_point_000500000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000500000)
+@.set	inverse_of_zero_point_000200000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000200000)
+@.set	inverse_of_zero_point_000100000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000100000)
+@.set	inverse_of_zero_point_000050000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000050000)
+@.set	inverse_of_zero_point_000020000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000020000)
+@.set	inverse_of_zero_point_000010000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000010000)
+@.set	inverse_of_zero_point_000005000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000005000)
+@.set	inverse_of_zero_point_000002000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000002000)
+@.set	inverse_of_zero_point_000001000, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000001000)
+@.set	inverse_of_zero_point_000000500, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000500)
+@.set	inverse_of_zero_point_000000200, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000200)
+@.set	inverse_of_zero_point_000000100, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000100)
+@.set	inverse_of_zero_point_000000050, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000050)
+@.set	inverse_of_zero_point_000000020, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000020)
+@.set	inverse_of_zero_point_000000010, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000010)
+@.set	inverse_of_zero_point_000000005, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000005)
+@.set	inverse_of_zero_point_000000002, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000002)
+@.set	inverse_of_zero_point_000000001, (double_precision_fixed_point__one/double_precision_fixed_point__zero_point_000000001)
+
+.set	inverse_of_zero_point_500000000,          2
+.set	inverse_of_zero_point_200000000,          5
+.set	inverse_of_zero_point_100000000,         10
+.set	inverse_of_zero_point_050000000,         20
+.set	inverse_of_zero_point_020000000,         50
+.set	inverse_of_zero_point_010000000,        100
+.set	inverse_of_zero_point_005000000,        200
+.set	inverse_of_zero_point_002000000,        500
+.set	inverse_of_zero_point_001000000,       1000
+.set	inverse_of_zero_point_000500000,       2000
+.set	inverse_of_zero_point_000200000,       5000
+.set	inverse_of_zero_point_000100000,      10000
+.set	inverse_of_zero_point_000050000,      20000
+.set	inverse_of_zero_point_000020000,      50000
+.set	inverse_of_zero_point_000010000,     100000
+.set	inverse_of_zero_point_000005000,     200000
+.set	inverse_of_zero_point_000002000,     500000
+.set	inverse_of_zero_point_000001000,    1000000
+.set	inverse_of_zero_point_000000500,    2000000
+.set	inverse_of_zero_point_000000200,    5000000
+.set	inverse_of_zero_point_000000100,   10000000
+.set	inverse_of_zero_point_000000050,   20000000
+.set	inverse_of_zero_point_000000020,   50000000
+.set	inverse_of_zero_point_000000010,  100000000
+.set	inverse_of_zero_point_000000005,  200000000
+.set	inverse_of_zero_point_000000002,  500000000
+.set	inverse_of_zero_point_000000001, 1000000000
+
+@.set	inverse_of_zero_point_500000, (fixed_point__one/fixed_point__zero_point_500000)
+@.set	inverse_of_zero_point_200000, (fixed_point__one/fixed_point__zero_point_200000)
+@.set	inverse_of_zero_point_100000, (fixed_point__one/fixed_point__zero_point_100000)
+@.set	inverse_of_zero_point_050000, (fixed_point__one/fixed_point__zero_point_050000)
+@.set	inverse_of_zero_point_020000, (fixed_point__one/fixed_point__zero_point_020000)
+@.set	inverse_of_zero_point_010000, (fixed_point__one/fixed_point__zero_point_010000)
+@.set	inverse_of_zero_point_005000, (fixed_point__one/fixed_point__zero_point_005000)
+@.set	inverse_of_zero_point_002000, (fixed_point__one/fixed_point__zero_point_002000)
+@.set	inverse_of_zero_point_001000, (fixed_point__one/fixed_point__zero_point_001000)
+@.set	inverse_of_zero_point_000500, (fixed_point__one/fixed_point__zero_point_000500)
+@.set	inverse_of_zero_point_000200, (fixed_point__one/fixed_point__zero_point_000200)
+@.set	inverse_of_zero_point_000100, (fixed_point__one/fixed_point__zero_point_000100)
+
+.set	double_precision_fixed_point__one, (1<<(double_precision_fixed_point_shift_by))
+
+.set	double_precision_fixed_point__zero_point_500000000, (1<<(double_precision_fixed_point_shift_by))/2
+.set	double_precision_fixed_point__zero_point_200000000, 2*double_precision_fixed_point__zero_point_500000000/5
+.set	double_precision_fixed_point__zero_point_100000000, double_precision_fixed_point__zero_point_500000000/5
+.set	double_precision_fixed_point__zero_point_050000000, (1<<(double_precision_fixed_point_shift_by))/20
+.set	double_precision_fixed_point__zero_point_020000000, 2*double_precision_fixed_point__zero_point_050000000/5
+.set	double_precision_fixed_point__zero_point_010000000, double_precision_fixed_point__zero_point_050000000/5
+.set	double_precision_fixed_point__zero_point_005000000, (1<<(double_precision_fixed_point_shift_by))/200
+.set	double_precision_fixed_point__zero_point_002000000, 2*double_precision_fixed_point__zero_point_005000000/5
+.set	double_precision_fixed_point__zero_point_001000000, double_precision_fixed_point__zero_point_005000000/5
+
+.set	double_precision_fixed_point__zero_point_000500000, (1<<(double_precision_fixed_point_shift_by))/2000
+.set	double_precision_fixed_point__zero_point_000200000, 2*double_precision_fixed_point__zero_point_000500000/5
+.set	double_precision_fixed_point__zero_point_000100000, double_precision_fixed_point__zero_point_000500000/5
+.set	double_precision_fixed_point__zero_point_000050000, (1<<(double_precision_fixed_point_shift_by))/20000
+.set	double_precision_fixed_point__zero_point_000020000, 2*double_precision_fixed_point__zero_point_000050000/5
+.set	double_precision_fixed_point__zero_point_000010000, double_precision_fixed_point__zero_point_000050000/5
+.set	double_precision_fixed_point__zero_point_000005000, (1<<(double_precision_fixed_point_shift_by))/200000
+.set	double_precision_fixed_point__zero_point_000002000, 2*double_precision_fixed_point__zero_point_000005000/5
+.set	double_precision_fixed_point__zero_point_000001000, double_precision_fixed_point__zero_point_000005000/5
+
+.set	double_precision_fixed_point__zero_point_000000500, (1<<(double_precision_fixed_point_shift_by))/2000000
+.set	double_precision_fixed_point__zero_point_000000200, 2*double_precision_fixed_point__zero_point_000000500/5
+.set	double_precision_fixed_point__zero_point_000000100, double_precision_fixed_point__zero_point_000000500/5
+.set	double_precision_fixed_point__zero_point_000000050, (1<<(double_precision_fixed_point_shift_by))/20000000
+.set	double_precision_fixed_point__zero_point_000000020, 2*double_precision_fixed_point__zero_point_000000050/5
+.set	double_precision_fixed_point__zero_point_000000010, double_precision_fixed_point__zero_point_000000050/5
+.set	double_precision_fixed_point__zero_point_000000005, (1<<(double_precision_fixed_point_shift_by))/200000000
+.set	double_precision_fixed_point__zero_point_000000002, 2*double_precision_fixed_point__zero_point_000000005/5
+.set	double_precision_fixed_point__zero_point_000000001, double_precision_fixed_point__zero_point_000000005/5
+
+.set	first_part_of_double_precision_fixed_point_shift_by, double_precision_fixed_point_shift_by>>1
+.set	second_part_of_double_precision_fixed_point_shift_by, double_precision_fixed_point_shift_by-first_part_of_double_precision_fixed_point_shift_by
+
+@.set	pseudo_floating_point_shift_by, fixed_point_shift_by>>2
+.set	pseudo_floating_point_shift_by, 2
+
+.set	overflow_fixed_point_unsigned, 1<<fixed_point_shift_by
+@.set	overflow_fixed_point_signed, 1<<fixed_point_shift_by
+

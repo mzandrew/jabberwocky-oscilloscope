@@ -1,0 +1,167 @@
+@ copyright 2007-2009 mza (Matthew Andrew)
+@ started 2008-04-29
+@ adapted from arm7-oled-clock, which was started 2007-09-19 (talk like a pirate day)
+@ renewed interest starting 2009-01-08 - rearranged source significantly
+@ 2009-02-03 rewrote master clock setting macro
+
+@ This program is free software; you can redistribute it and/or modify
+@ it under the terms of the GNU General Public License as published by
+@ the Free Software Foundation; either version 3 of the License, or
+@ (at your option) any later version.
+
+@ This program is distributed in the hope that it will be useful,
+@ but WITHOUT ANY WARRANTY; without even the implied warranty of
+@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+@ GNU General Public License for more details.
+
+@ You should have received a copy of the GNU General Public License
+@ along with this program; if not, write to the Free Software
+@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+@ or visit http://www.fsf.org/
+
+.include "initialization/assembler-directives"
+.include "generic/debug.globals"
+.include "equates/unique-numbers.equates"
+.include "equates/user-modifiable.equates"
+.include "equates/generic.equates"
+.include "equates/oled-display.equates"
+.ifeq	function-clock
+	.include "equates/arm7-oled-clock.equates"
+.endif
+.ifeq	function-oscilloscope
+	.include "equates/jabberwocky.equates"
+.endif
+.ifeq	samfamily-at91sam7s
+	.include "equates/at91sam7s64.equates"
+.endif
+.ifeq	samfamily-at91sam7a3
+	.include "equates/at91sam7a3.equates"
+.endif
+.include "equates/math.equates"
+.include "equates/at91sam7.equates"
+
+.include "generic/generic.macros"
+.include "generic/math.macros"
+.include "generic/io-pin.macros"
+.include "generic/analog-to-digital-converter.macros"
+.include "generic/timer.macros"
+.include "i2c/i2c.macros"
+.include "i2c/i2c-initialization.macros"
+.include "initialization/initialization.macros"
+.include "initialization/initialize-clocks-and-timers.macros"
+.include "initialization/initialize-io-lines.macros"
+.include "oled-display/oled-display.macros"
+.include "oled-display/oled-display-test-code.macros"
+.include "oled-display/oled-display-initialization.macros"
+.include "oled-display/oled-display-low-level.macros"
+.include "oled-display/oled-display-high-level.macros"
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock.macros"
+	.include "oled-display/image.macros"
+.endif
+.ifeq	function-oscilloscope
+	.include "oscilloscope/jabberwocky.macros"
+	.include "oscilloscope/jabberwocky-i2c.macros"
+	.include "oscilloscope/jabberwocky-oled-display.macros"
+	.ifdef	onboard_oscilloscope_available
+		.include "oscilloscope/jabberwocky-onboard-oscilloscope.macros"
+	.endif
+	.include "oscilloscope/jabberwocky-test-code.macros"
+.endif
+
+.include "generic/math.4.data"
+.include "oled-display/oled-display.4.data"
+.ifeq	function-oscilloscope
+	.include "oscilloscope/jabberwocky.4.data"
+.endif
+@ these are sandwiched between .align 2's because these should be the only
+@ non-word aligned elements:
+.align 2
+.include "generic/math.2.data"
+.include "generic/miscellaneous.1.data"
+.ifeq	function-oscilloscope
+	.include "oscilloscope/jabberwocky.1.data"
+.endif
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock.1.data"
+.endif
+.align 2
+
+.include "generic/miscellaneous.4.bss"
+.include "oled-display/oled-display.4.bss"
+.ifeq	function-oscilloscope
+	.include "oscilloscope/jabberwocky.4.bss"
+.endif
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock.4.bss"
+.endif
+@ these are sandwiched between .align 2's because these should be the only
+@ non-word aligned elements:
+.align 2
+.include "generic/miscellaneous.1.bss"
+.include "arm7-oled-clock.bss" @ this file has all the odd-sized elements
+.include "oled-display/oled-display.1.bss"
+.ifeq	function-oscilloscope
+	.include "oscilloscope/jabberwocky.1.bss"
+.endif
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock.1.bss"
+.endif
+.align 2
+
+.include "generic/generic.functions" @ if this is first, the "rebooting" message hs a good chance of being shown correctly
+
+.include "initialization/initialization.functions"
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock-initialization.functions"
+	@.include "work/test-image-32x32.armasm"
+	@.include "work/image.2007-10-10.s45-19667-cropped-small.armasm"
+	@.include "work/image.2007-12-11.s50-00165-cropped-enhanced-2-small.armasm"
+	mypool
+	.include "work/image.2007-12-11.s50-00165-cropped-enhanced-3-small.armasm"
+	mypool
+.endif
+
+.include "generic/debug.functions"
+.include "generic/math.functions"
+.include "oled-display/oled-display.functions"
+.ifeq	function-clock
+	.include "clock/arm7-oled-clock.functions"
+	.include "clock/arm7-oled-clock-io-pin.functions"
+	.include "oled-display-clock.functions"
+	.include "clock/spi-rtc.functions"
+.endif
+.ifeq	function-oscilloscope
+	.include "initialization/jabberwocky-initialization.functions"
+	.include "initialization/CAL-output-initialization.functions"
+	.ifdef	onboard_oscilloscope_available
+		.include "oscilloscope/jabberwocky-onboard-oscilloscope-initialization.functions"
+	.endif
+	.include "oscilloscope/jabberwocky-io-pin-initialization.functions"
+	.include "oscilloscope/jabberwocky-main-loop.functions"
+	.include "oscilloscope/jabberwocky.functions"
+	.include "oscilloscope/labrador3.functions"
+	.include "oscilloscope/jabberwocky-oled-display.functions"
+	.include "oscilloscope/jabberwocky-io-pin.functions"
+	.include "oscilloscope/jabberwocky-analog-to-digital-converter.functions"
+	.ifdef	onboard_oscilloscope_available
+		.include "oscilloscope/jabberwocky-onboard-oscilloscope.functions"
+	.endif
+	.ifdef trigger_delay_available
+		.include "oscilloscope/trigger-delay.functions"
+	.endif
+	.include "oscilloscope/trigger-level.functions"
+.include "i2c/i2c-low-level.functions"
+.include "i2c/i2c-high-level.functions"
+.endif
+.include "generic/io-pin.functions"
+.include "generic/button-and-rotary-encoder.functions"
+.include "oled-display/font.functions"
+.include "oled-display/font.lookup-table"
+
+.include "initialization/reset-vector"
+.include "main-loop"
+.include "initialization/ignore-exception"
+
+.end
+

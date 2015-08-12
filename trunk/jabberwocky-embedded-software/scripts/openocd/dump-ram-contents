@@ -1,0 +1,26 @@
+# copyright 2007 mza (Matthew Andrew)
+# started 2007-09-19 (talk like a pirate day)
+
+# the second number is the number of 32bit, 16bit or 8bit blocks to show, not just bytes
+
+#mdw 0x200000 128
+
+#mdw 0x200000 256
+#sleep 200
+
+#mdw 0x200400 256
+#sleep 200
+
+#mdw 0x200100 512
+#sleep 200
+
+mdw 0x200e8c 64
+sleep 200
+
+#mdh 0x200000 512
+#mdw 0x200000 800
+sleep 200
+
+#resume
+#sleep 200
+

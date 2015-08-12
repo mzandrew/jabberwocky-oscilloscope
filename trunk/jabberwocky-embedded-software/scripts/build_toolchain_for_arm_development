@@ -1,0 +1,262 @@
+#!/bin/bash -e
+
+# when in doubt, remove the entire blah-arm-build dir and redo
+
+declare source_dir binutils_version_string newlib_version_string gcc_version_string insight_version_string libusb_version_string libftdi_version_string openocd_version_string
+declare build_dir destination_dir newlib_source_dir nice="nice -n 15"
+declare common_configure_options_a common_configure_options_b binutils_configure_options newlib_configure_options gcc_configure_options insight_configure_options libusb_configure_options openocd_configure_options libftdi_configure_options
+declare should_extract="no" should_configure="no" should_compile="no" should_install="no"
+
+function reset_should_options { should_extract="no"; should_configure="no"; should_compile="no"; should_install="no"; }
+
+function extract_all {
+	reset_should_options
+	should_extract="yes"
+	binutils; newlib; gcc; insight
+}
+
+function libusb   { go ${libusb_version_string}   "${common_configure_options_a} ${libusb_configure_options}";   }
+function libftdi  { go ${libftdi_version_string}  "${common_configure_options_a} ${libftdi_configure_options}";  }
+function openocd  { go ${openocd_version_string}  "${common_configure_options_a} ${openocd_configure_options}";  }
+function binutils { go ${binutils_version_string} "${common_configure_options_b} ${binutils_configure_options}"; }
+function newlib   { go ${newlib_version_string}   "${common_configure_options_b} ${newlib_configure_options}";   }
+function insight  { go ${insight_version_string}  "${common_configure_options_b} ${insight_configure_options}";  }
+
+function gcc {
+	# this needs to be done here, because --with-headers tells gcc to copy this, but since make is not run as root, the dir & files cannot be created:
+	sudo cp -ar ${newlib_source_dir}/newlib/libc/include ${destination_dir}/arm-elf/sys-include
+	go ${gcc_version_string} "${common_configure_options_b} ${gcc_configure_options}"
+}
+
+function go {
+	local version_string=${1}
+	local configure_options=${2}
+	local archive="${source_dir}/${version_string}.tar"
+	local local_build_dir="${build_dir}/${version_string}-arm-build"
+	cd ${build_dir}
+#	if [ "${should_svn}" = "yes" ]; then
+#	fi
+	if [ "${should_extract}" = "yes" ]; then
+		if [ -e "${local_build_dir}" ]; then
+			echo "error:  dir \"${local_build_dir}\" already exists" >&2
+			exit 5
+		fi
+		local archive_type="tar"
+		if [ -e "${archive}.bz2" ]; then
+			archive="${archive}.bz2" 
+			archive_type="bzip2"
+		elif [ -e "${archive}.gz" ]; then
+			archive="${archive}.gz" 
+			archive_type="gzip"
+		fi
+		if [ ! -e "${archive}" ]; then
+			echo "error:  file \"${archive}\" does not exist" >&2
+			exit 4
+		fi
+		echo "extracting \"${archive}\" into \"${version_string}\"..."
+		#local archive_type=$(file "${archive}" | sed -e "s,.*\(bzip2\|gzip\).*,\1,")
+		if [ "${archive_type}" = "bzip2" ]; then
+			#echo "archive type bzip2"
+			tar -xjf "${archive}"
+		elif [ "${archive_type}" = "gzip" ]; then
+			#echo "archive type gzip"
+			tar -xzf "${archive}"
+		else
+			tar -xf "${archive}"
+		fi
+	fi
+	mkdir -p ${local_build_dir}
+	cd ${local_build_dir}
+	if [ "${should_configure}" = "yes" ]; then
+		echo "configuring in \"${local_build_dir}/\"..."
+		rm -f config.cache
+		${nice} ../${version_string}/configure ${configure_options}
+	fi
+	if [ "${should_compile}" = "yes" ]; then
+		echo "compiling \"${version_string}\"..."
+		${nice} make
+	fi
+	if [ "${should_install}" = "yes" ]; then
+		#echo "must be superuser to make install" | tee /dev/stderr
+		echo "must be superuser to make install" >&2
+		${nice} sudo PATH="${PATH}:${destination_dir}/bin" make install
+	fi
+}
+
+function strip {
+	if [ "${should_install}" = "yes" ]; then
+		du ${destination_dir}/bin
+		for each in ${destination_dir}/bin/*; do
+			if [ -f "${each}" ]; then
+# && [ ! -d ${each} ]; then
+				local type=$(file "${each}" | grep "ELF")
+				if [ ! -z "${type}" ]; then
+					lf ${each}
+					${nice} sudo strip ${each}
+					lf ${each}
+				fi
+			fi
+		done
+		du ${destination_dir}/bin
+	fi
+}
+
+      build_dir="${HOME}/build"
+destination_dir="/usr/local/arm-elf"
+export PATH="${PATH}:${destination_dir}/bin"
+
+             source_dir="${HOME}/downloads/libusb-libftdi-openocd-binutils-newlib-gcc-insight"
+#binutils_version_string="binutils-2.17"
+binutils_version_string="binutils-2.19"
+#binutils_version_string="binutils-2.19.1"
+  newlib_version_string="newlib-1.14.0"
+     gcc_version_string="gcc-4.1.1"
+ insight_version_string="insight-6.5"
+
+ insight_version_string="insight-6.8"
+ 
+  libusb_version_string="libusb-1.0.0"
+ libftdi_version_string="libftdi-0.15"
+ #openocd_version_string="svn-1200"
+ openocd_version_string="openocd-1200"
+# openocd_version_string="openocd-current"
+
+newlib_source_dir="${build_dir}/${newlib_version_string}"
+
+common_configure_options_a=" \
+"
+libusb_configure_options=" \
+	--prefix=/usr \
+"
+#	--prefix=/usr/local \
+libftdi_configure_options=" \
+"
+openocd_configure_options=" \
+	--enable-ft2232-libftdi \
+"
+#	--enable-parport \
+#	--enable-ppdev \
+common_configure_options_b=" \
+	--host=i686-pc-linux-gnu \
+	--build=i686-pc-linux-gnu \
+	--target=arm-elf \
+	--program-prefix=arm-elf- \
+	--with-cpu=arm7tdmi \
+	--prefix=${destination_dir} \
+	--enable-languages=c \
+	--with-gnu-ld \
+	--with-gnu-as \
+	--with-gcc \
+	--disable-threads \
+	--disable-multilib \
+	--disable-interwork \
+	--disable-nls \
+"
+binutils_configure_options=" \
+	--disable-werror \
+"
+newlib_configure_options=" \
+	--disable-shared \
+"
+gcc_configure_options=" \
+	--disable-libssp \
+	--with-headers=${newlib_source_dir}/newlib/libc/include \
+	--with-newlib \
+"
+insight_configure_options=" \
+"
+#	--without-headers \
+#	--without-docdir \
+#	--without-htmldir \
+
+function get_prerequisites {
+	#${nice} sudo apt-get install libgmp3-dev
+	#${nice} sudo apt-get install libmpfr-dev
+	${nice} sudo apt-get install texinfo     # for newlib's documentation
+#	${nice} sudo apt-get install libftdi1
+#	${nice} sudo apt-get install libftdi-dev
+}
+
+#get_prerequisites
+
+function add_udev_rule {
+	local filename="/etc/udev/rules.d/45-ft2232.rules"
+	if [ -e "${filename}" ]; then
+		local -i count=$(grep -c "15ba" "${filename}")
+		echo "${count} matches in \"${filename}\""
+	else
+#		echo >> "${filename}" <<eol
+#BUS!="usb", ACTION!="add", SUBSYSTEM!=="usb_device", GOTO="kcontrol_rules_end"
+#SYSFS{idProduct}=="0004", SYSFS{idVendor}=="15ba", MODE="664", GROUP="plugdev"
+#LABEL="kcontrol_rules_end"
+#eol
+		sudo cp "$(dirname $0)/udev-rule" "${filename}"
+		local -i count=$(grep -c "15ba" "${filename}")
+		echo "${count} matches in \"${filename}\""
+	fi
+}
+
+add_udev_rule
+ 
+if [ ! -e "/usr/local/arm-elf/bin" ]; then
+	sudo mkdir -p "/usr/local/arm-elf/bin"
+fi
+
+#should_extract="yes"
+should_configure="yes"
+should_compile="yes"
+should_install="yes"
+
+#libusb
+#sudo apt-get install libusb
+#sudo apt-get install libusb-dev
+#libftdi; sudo ldconfig
+openocd
+
+#binutils
+#gcc
+#newlib
+#insight
+
+strip
+
+# notes:
+
+# --program-prefix=arm-elf-     prefix arm-elf- to each generated binary tool's filename so that running "as" or "ld" or "gcc" on host won't run what's built here for arm
+# --target=arm-elf              target = build for building for arm architecture, elf binary file format
+# --build=i686-pc-linux-gnu     build = 
+# --host=i686-pc-linux-gnu      host = 
+# --with-cpu=arm7tdmi           variant of arm7 in the s64 and a3
+# --prefix=/usr/local/arm-elf/  where all this stuff gets installed
+
+# --disable-threads             for java and c++
+# --enable-languages=c          make it "c,c++" if you want c++ too
+# --msoft-float                 generate software to emulate floating point hardware
+# --enable-multilib             this is to build several variants of the library at once (a hard-fp version & a soft-fp version, etc)
+# --enable-interwork            to make it generate code that works in either arm or thumb mode
+# --with-build-time-tools="${destination_dir}"
+
+# for gcc:
+# --disable-nls                 disable native language support (error messages in other languages)
+# --with-newlib                 doesn't include _eprintf, assuming it will be provided by newlib
+# --with-headers="${newlib_source_dir}/newlib/libc/include" make sure to copy newlib headers over to install location
+# --with-float=soft
+
+# for newlib:
+# must run configure and then edit the Makefile in ./etc to tell it that "all" and "install-all" should do nothing
+# --disable-shared              only build static libraries
+
+# might need these to get the compiler/newlib to compile:
+# --disable-ada
+# --disable-libssp
+
+# compiling statically against newlib (from newlib's README):
+# target_install_dir = $(install_dir)/i[34567]86-pc-linux-gnu
+# gcc -nostdlib -static $(target_install_dir)/lib/crt0.o progname.c -I $(target_install_dir)/include -L $(target_install_dir)/lib -lc -lm
+# prefix = /usr/local/arm-elf/arm-elf
+# gcc -nostdlib -static $(prefix)/lib/crt0.o progname.c -I $(prefix)/include -L $(prefix)/lib -lc -lm
+
+#for gdb:
+#-with-gnu-as
+#--with-gnu-ld
+

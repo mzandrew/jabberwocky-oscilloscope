@@ -1,0 +1,20 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+current_display_brightness_level:	.byte 0
+previous_display_brightness_level:	.byte 0
+
+display_needs_redrawing:	.byte 0
+
+x_position_of_center_of_circle:	.byte 0
+y_position_of_center_of_circle:	.byte 0
+radius_of_circle:	.byte 0
+
+current_character:	.byte 0
+position_of_center_of_current_character_x:	.byte 0
+position_of_center_of_current_character_y:	.byte 0
+
+position_of_beginning_of_line_x:	.byte 0
+position_of_beginning_of_line_y:	.byte 0
+position_of_end_of_line_x:	.byte 0
+position_of_end_of_line_y:	.byte 0
+

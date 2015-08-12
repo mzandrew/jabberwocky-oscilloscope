@@ -1,0 +1,13 @@
+#!/bin/bash
+
+declare root="arm7-oscilloscope"
+
+
+rm "${root}-gerbers.zip"
+
+for each in *.GTL *.GBL *.GTS *.GBS *.GTO *.GBO *.DRD; do
+	mv "${each}" "${root}-gerbers/"
+done
+
+zip -r -0 "${root}-gerbers.zip" ${root}-gerbers/*
+

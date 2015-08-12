@@ -1,0 +1,18 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+first_time:	.byte 0
+@display_needs_update:	.byte 0
+
+rotary_encoder_a_previous_position:	.byte 0
+rotary_encoder_a_current_position:	.byte 0
+
+rotary_encoder_a_value:	.byte 0
+rotary_encoder_a_signed_delta_stable:	.byte 0
+rotary_encoder_a_signed_delta_stable_previous_increase_or_decrease: .byte 0
+
+rotary_encoder_b_signed_delta_stable:	.byte 0
+
+general_purpose_output_toggle_status:	.byte 0
+
+flash_wait_states:	.byte 0
+

@@ -1,0 +1,10 @@
+./configure --host=i686-pc-linux-gnu --program-prefix=arm-elf- --target=arm-elf --disable-threads --with-cpu=arm7tdmi --enable-languages=c
+
+./configure \
+	--host=i686-pc-linux-gnu \
+	--program-prefix=arm-elf- \
+	--target=arm-elf \
+	--disable-threads \
+	--with-cpu=arm7tdmi \
+	--enable-languages=c \
+

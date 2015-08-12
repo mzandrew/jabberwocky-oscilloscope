@@ -1,0 +1,1485 @@
+
+old_acquire_data_from_lab3:
+	push	r0-r12	@ bug/future
+		pulse_general_purpose_output	output=a, saveregs=yes
+@		pulse_general_purpose_output	output=b, saveregs=yes
+	call	selmain
+	call	set_lab3_channel_address
+	ldr	r0, =lab3_address_bus_port
+	ldr	r1, =lab3_data_bus_port
+	ldr	r2, =0 @ beginning address
+	ldr	r4, =beginning_of_lab3_buffer_for_channel_a
+	ldr	r6, =0b1111111111111
+old_acquire_data_from_lab3__next_address:
+	mov	r3, r2, lsl #lab3_address_bus_shift
+	str	r3, [r0, #Output_Data_Status_Register_offset]
+		turn_on_general_purpose_output	output=c, saveregs=yes
+	ldr	r5, [r1, #PIO_Controller_Pin_Data_Status_Register_offset]
+		turn_off_general_purpose_output	output=c, saveregs=yes
+	mov	r5, r5, lsr #lab3_data_bus_shift
+	and	r5, r5, r6
+	strh	r5, [r4], #2
+	inc	r2
+	cmp	r2, #256
+	bNE old_acquire_data_from_lab3__do_not_switch_to_seltail
+	call	seltail
+@		pulse_general_purpose_output	output=c, saveregs=yes
+old_acquire_data_from_lab3__do_not_switch_to_seltail:
+	cmp	r2, #lab3_number_of_samples
+	bLO	old_acquire_data_from_lab3__next_address
+	pop	r0-r12	@ bug/future
+	return
+
+notes from function set_lab3_channel_address:
+	@ 0=1faa 1=1f80 2=1faa 3=1f80 4=1f85/1f89/1f8a 5=1f80
+	@ but only when seltail and selmain are 0
+	@ 4=1ffa after touching ch_a to the CAL output
+	@ but then after a while it went to 1ffc/1ffd and then back to 1ffa
+	@ 6=1fe3/1ffc 7=1f80 8=1faa 9=1faa 10=1faa
+	@ after fixing sample address bus port problem:
+	@ 0=0000 1=0000 2=0000
+	@ after fixing something else
+	@ 0=misc 1=0000 2=misc 3=0000 4=misc
+	@ and then (did I break it?):
+	@ 0=0000 1=0000 2=0000 3=0000 4=0000
+	@ after a bunch more work
+	@ 0=big noise
+	@ 1=noise + hitbus spike + square wave if I connect it
+	@ 2=big noise
+	@ 3=noise + hitbus spike
+	@ 4=big noise
+	@ 5=noise + hitbus spike
+	@ 6=big noise
+	@ 7=noise + hitbus spike + square wave if I connect it
+	@ 8=big noise
+	@ 9=big noise
+
+old_setup_other_input_output_lines:
+	push	r0-r12
+	ldr	r1, =0	@ peripheral a port a on r1
+	.ifeq	samfamily-at91sam7s
+		@ bug/future:  one of the following 2 looks like a bug, but maybe not: (see below)
+		orr	r1, r1, #bit00<<CAL_output__port_a_bit_number
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Peripheral_A_Select_Register_offset
+	@
+	ldr	r2, =0	@ peripheral b port a on r2
+	.ifeq	samfamily-at91sam7a3
+		@ bug/future:  one of the following 2 looks like a bug, but maybe not: (see above)
+		orr	r2, r2, #bit00<<CAL_output__port_a_bit_number
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=PIO_Peripheral_B_Select_Register_offset
+	@
+@	ldr	r3, =0	@ peripheral a port b on r3
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=PIO_Peripheral_A_Select_Register_offset
+	@
+@	ldr	r4, =0	@ peripheral b port b on r4
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=PIO_Peripheral_B_Select_Register_offset
+	@
+	ldr	r0, =0	@ r0 = peripheral (not pio) outputs for port a with pull-ups enabled
+	.ifeq	model-oscilloscoperev00
+		orr	r0, r0, #bit00<<CAL_output__port_a_bit_number
+	.endif
+	.ifeq	model-prototypeoscilloscope
+		.ifeq	old_mode-test_trigger_delay
+			@ the following 5 conflict with the way the prototype is wired up as of 2008-05-07:
+			orr	r1, r1, #bit00<<CAL_output__port_a_bit_number
+		.endif
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=PIO_Disable_Register_offset
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Pull_Up_Enable_Register_offset
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r0, address_offset=Output_Enable_Register_offset
+	@
+	ldr	r1, =0	@ r1 = outputs for port a with pull-ups disabled
+	.ifeq	model-oscilloscoperev00
+		orr	r1, r1, #bit00<<enable_2_point_5_Volts__port_a_bit_number
+		orr	r1, r1, #bit00<<vdisplay_enable_port_a_bit
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Enable_Register_offset
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Pull_Up_Disable_Register_offset
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Output_Enable_Register_offset
+	@
+	ldr	r2, =0	@  inputs for port a on r2
+	.ifeq	model-oscilloscoperev00
+		orr	r2, r2, #bit00<<button_1_port_a_bit
+		orr	r2, r2, #bit00<<button_2_port_a_bit
+	.endif
+	.ifeq	samfamily-at91sam7s
+@@bug?		orr	r2, r2, r1, lsl #button_c_port_a_bit
+		orr	r2, r2, #bit00<<button_c_port_a_bit
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=PIO_Disable_Register_offset
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=Output_Disable_Register_offset
+	@
+@	ldr	r3, =0	@ outputs for port b on r3
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=PIO_Disable_Register_offset
+@@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=Pull_Up_Disable_Register_offset
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=Output_Enable_Register_offset
+	@
+@	ldr	r4, =0	@  inputs for port b on r4
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=PIO_Disable_Register_offset
+@@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=Pull_Up_Disable_Register_offset
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=Output_Disable_Register_offset
+	@ the following are controlled by the PIO controller (not by peripherals) and need to be set to 1s or 0s:
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<enable_2_point_5_Volts__port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Set_Output_Data_Register_offset
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<enable_2_point_5_Volts__port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Enable_Register_offset
+	pop	r0-r12
+	return
+
+old_setup_labrador3_input_output_lines:
+	push	r0-r4
+	ldr	r0, =bit00
+	ldr	r1, =0	@ peripheral a port a on r1
+	ldr	r2, =0	@ peripheral b port a on r2
+	ldr	r3, =0	@ peripheral a port b on r3
+	ldr	r4, =0	@ peripheral b port b on r4
+	.ifeq	samfamily-at91sam7s
+		orr	r2, r2, #bit00<<trigger_delay__trigger_b__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__trigger_a__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__RCO__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__nRUN__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__RAMP__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__GCLOCK_GATE__port_a_bit_number
+		orr	r2, r2, #bit00<<trigger_delay__trigger_registered__port_a_bit_number
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r3, r3, #bit00<<trigger_delay__trigger_b__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_a__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RCO__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__nRUN__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RAMP__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__GCLOCK_GATE__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_registered__port_b_bit_number
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Peripheral_A_Select_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=PIO_Peripheral_B_Select_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=PIO_Peripheral_A_Select_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=PIO_Peripheral_B_Select_Register_offset, saveregs=yes
+	ldr	r1, =0	@ outputs for port a on r1
+	ldr	r2, =0	@  inputs for port a on r2
+	ldr	r3, =0	@ outputs for port b on r3
+	ldr	r4, =0	@  inputs for port b on r4
+	orr	r1, r1, #bit00<<seltail_port_a_bit_number
+	orr	r1, r1, #bit00<<selmain_port_a_bit_number
+	.ifeq	samfamily-at91sam7s
+		.ifeq	old_mode-test_trigger_delay
+			@ the following 5 conflict with the way the prototype is wired up as of 2008-05-07:
+			orr	r2, r2, #bit00<<trigger_delay__trigger_b__port_a_bit_number
+			orr	r2, r2, #bit00<<trigger_delay__trigger_a__port_a_bit_number
+			orr	r2, r2, #bit00<<trigger_delay__RCO__port_a_bit_number
+			orr	r1, r1, #bit00<<trigger_delay__nRUN__port_a_bit_number
+			orr	r1, r1, #bit00<<trigger_delay__trigger_registered__port_a_bit_number
+		.endif
+		orr	r1, r1, #bit00<<trigger_delay__RAMP__port_a_bit_number
+		orr	r1, r1, #bit00<<trigger_delay__GCLOCK_GATE__port_a_bit_number
+	.endif
+	.ifeq	samfamily-at91sam7a3
+		orr	r4, r4, #bit00<<trigger_delay__trigger_b__port_b_bit_number
+		orr	r4, r4, #bit00<<trigger_delay__trigger_a__port_b_bit_number
+		orr	r4, r4, #bit00<<trigger_delay__RCO__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__nRUN__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__RAMP__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__GCLOCK_GATE__port_b_bit_number
+		orr	r3, r3, #bit00<<trigger_delay__trigger_registered__port_b_bit_number
+	.endif
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Pull_Up_Enable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Output_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Output_Enable_Register_offset, saveregs=yes
+	@
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=PIO_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r2, address_offset=Output_Disable_Register_offset, saveregs=yes
+	@
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=PIO_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r3, address_offset=Output_Enable_Register_offset, saveregs=yes
+	@
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=PIO_Disable_Register_offset, saveregs=yes
+@	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=Pull_Up_Disable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r4, address_offset=Output_Disable_Register_offset, saveregs=yes
+	@
+	@ the following are controlled by the PIO controller (not by peripherals) and need to be set to 1s or 0s:
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<seltail_port_a_bit_number
+	orr	r1, r1, #bit00<<selmain_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=yes
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<seltail_port_a_bit_number
+	orr	r1, r1, #bit00<<selmain_port_a_bit_number
+	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register=r1, address_offset=PIO_Enable_Register_offset, saveregs=yes
+	@
+	ldr	r1, =0
+	orr	r1, r1, #bit00<<trigger_delay__GCLOCK_CLEAR__port_b_bit_number
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r1, address_offset=Clear_Output_Data_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r1, address_offset=PIO_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r1, address_offset=Pull_Up_Enable_Register_offset, saveregs=yes
+	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register=r1, address_offset=Output_Enable_Register_offset, saveregs=yes
+	pop	r0-r4
+	return
+
+old_copy_lab3_channel_a_buffer_to_trace_1_buffer:
+	push	r0-r12	@ bug/future
+	ldr	r0, =1
+	ldr	r1, =7
+	call	convert_32bit_fl_to_32bit_fl
+	call	swap_floats
+	ldr	r1, =0
+	@ trace drawing routine expects numbers in 15 bit fixed point format
+	@ lab3 data is 12 bits
+	ldr	r4, =beginning_of_lab3_buffer_for_channel_a
+	ldr	r5, =beginning_of_trace_1
+	ldr	r6, =number_of_datapoints_in_a_displayed_trace
+old_copy_lab3_channel_a_buffer_to_trace_1_buffer__next:
+	ldr	r7, =bit00<<log_base_2_of_number_of_samples_per_displayed_point
+	ldr	r0, =0
+old_copy_lab3_channel_a_buffer_to_trace_1_buffer__next__next:
+	ldr	r8, [r4], #4
+	add	r0, r0, r8
+	dec	r7
+	bNE	old_copy_lab3_channel_a_buffer_to_trace_1_buffer__next__next
+	call	convert_32bit_to_32bit_fl
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_i_result
+	mov	r0, r0, lsr #log_base_2_of_number_of_samples_per_displayed_point
+	str	r0, [r5], #4
+	dec	r6
+	bNE	old_copy_lab3_channel_a_buffer_to_trace_1_buffer__next
+	pop	r0-r12	@ bug/future
+	return
+
+test_floating_point_add:
+	push	r0-r12 @ bug/future
+	@ test floating-point add:
+
+	ldr	r0, =0x3
+	ldr	r1, =0x6
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x6
+	ldr	r1, =0x3
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+.ifc	asdf,s
+	ldr	r0, =0xc0000000
+	ldr	r1, =-29
+	ldr	r2, =0xa0000000
+	ldr	r3, =-27
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@		debug	r0
+@		debug	r1
+	call	convert_32bit_fl_to_32bit
+@		debug	r0
+
+	ldr	r0, =0x11112222
+		debug	r0
+	ldr	r0, =23000000
+	ldr	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =21000000
+	ldr	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+		debug	r0
+		debug	r1
+		debug	r2
+		debug	r3
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	call	convert_32bit_fl_to_32bit
+		debug	r0
+
+	ldr	r0, =0x33334444
+		debug	r0
+	ldr	r0, =23000000
+	ldr	r1, =1
+	call	convert_32bit_fl_to_32bit_fl
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =21000000
+	ldr	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+		debug	r0
+		debug	r1
+		debug	r2
+		debug	r3
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	call	convert_32bit_fl_to_32bit
+		debug	r0
+
+	ldr	r0, =0x55556666
+		debug	r0
+	ldr	r0, =23000000
+	ldr	r1, =-1
+	call	convert_32bit_fl_to_32bit_fl
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =21000000
+	ldr	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+		debug	r0
+		debug	r1
+		debug	r2
+		debug	r3
+	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	call	convert_32bit_fl_to_32bit
+		debug	r0
+.endif
+
+.ifc	asdf,eh
+	ldr	r0, =0x0
+	ldr	r1, =0x1
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x1
+	ldr	r1, =0x2
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x3
+	ldr	r1, =0x56
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x21000
+	ldr	r1, =0x56000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x21000000
+	ldr	r1, =0x56000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =120005000
+	ldr	r1, =120004000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x21000000
+	ldr	r1, =0x56000000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	ldr	r0, =0x21000000
+	ldr	r1, =0x1f000000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+
+	@ this one should underflow:
+	ldr	r0, =0x8000000
+	ldr	r1, =0xe000000
+	call	add_32bit_i_to_32bit_i_with_32bit_i_result
+	debug	r0
+.endif
+
+	pop	r0-r12 @ bug/future
+	return
+
+old_i2c_read_a_byte_with_internal_address:
+	@ this function modifies r0 !
+	@ this function requires r3 = the address of the source i2c device
+	@ this function requires r4 = the internal address of the source i2c device
+	push	r1-r4
+	@ test TWI/I2C:
+@		ldr	r1, =0x55554444
+@		debug	r1
+	ldr	r0, =TWI
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	mov	r1, r3, lsl #16
+	ldr	r2, =bit00
+	add	r1, r1, r2, lsl #12	@ set this bit for master=read mode; otherwise master=write mode
+@	ldr	r2, =0	@ no internal address
+	ldr	r2, =1	@ one byte internal address
+@	ldr	r2, =2	@ two byte internal address
+@	ldr	r2, =3	@ three byte internal address
+	add	r1, r1, r2, lsl #8	@ number of bytes of internal address
+	str	r1, [r0, #TWI_Master_Mode_Register_offset]
+	str	r4, [r0, #TWI_Internal_Address_Register_offset]
+	@ tell it to start:
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ start
+	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+	str	r2, [r0, #TWI_Control_Register_offset]
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	@ receive a byte:
+	ldr	r2, =bit00<<1	@ RXRDY
+old_i2c_read_a_byte_with_internal_address__wait_for_twi_to_finish_receiving:
+	ldr	r1, [r0, #TWI_Status_Register_offset]
+	tst	r1, r2
+	bEQ	i2c_read_a_byte_with_internal_address__wait_for_twi_to_finish_receiving
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	@ read the data:
+	ldr	r3, [r0, #TWI_Receive_Holding_Register_offset]
+@		debug	r3
+	@ wait for it to finish the transmission sequence:
+	ldr	r2, =bit00<<0	@ TXCOMP
+old_i2c_read_a_byte_with_internal_address__wait_for_twi_to_finish_sequence:
+	ldr	r1, [r0, #TWI_Status_Register_offset]
+	tst	r1, r2
+	bEQ	i2c_read_a_byte_with_internal_address__wait_for_twi_to_finish_sequence
+@		debug	r1
+	@ tell it to stop:
+@	ldr	r1, =bit00
+@	ldr	r2, =0
+@	add	r2, r2, r1, lsl #0	@ start
+@	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+@	str	r2, [r0, #TWI_Control_Register_offset]
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	mov	r0, r3
+	pop	r1-r4
+	return
+
+old_i2c_write_a_byte_with_internal_address:
+	@ this function requires r3 = the address of the destination i2c device
+	@ this function requires r4 = the internal address of the destination i2c device
+	@ this function requires r5 = the byte to be written
+	push	r0-r5
+	@ test TWI/I2C:
+@		ldr	r1, =0x55554444
+@		debug	r1
+	ldr	r0, =TWI
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	mov	r1, r3, lsl #16
+	ldr	r2, =bit00
+@	add	r1, r1, r2, lsl #12	@ set this bit for master=read mode; otherwise master=write mode
+@	ldr	r2, =0	@ no internal address
+	ldr	r2, =1	@ one byte internal address
+@	ldr	r2, =2	@ two byte internal address
+@	ldr	r2, =3	@ three byte internal address
+	add	r1, r1, r2, lsl #8	@ number of bytes of internal address
+	str	r1, [r0, #TWI_Master_Mode_Register_offset]
+	str	r4, [r0, #TWI_Internal_Address_Register_offset]
+	@ tell it to start:
+	ldr	r1, =bit00
+	ldr	r2, =0
+	add	r2, r2, r1, lsl #0	@ start
+	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+	str	r2, [r0, #TWI_Control_Register_offset]
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	@ send a byte:
+	str	r5, [r0, #TWI_Transmit_Holding_Register_offset]
+	@ check to see that it's still working:
+	ldr	r2, =bit00<<2	@ TXRDY
+old_i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_transmitting:
+	ldr	r1, [r0, #TWI_Status_Register_offset]
+	tst	r1, r2
+	bEQ	old_i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_transmitting
+	@ wait for it to finish the transmission sequence:
+	ldr	r2, =bit00<<0	@ TXCOMP
+old_i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_sequence:
+	ldr	r1, [r0, #TWI_Status_Register_offset]
+	tst	r1, r2
+	bEQ	old_i2c_write_a_byte_with_internal_address__wait_for_twi_to_finish_sequence
+@		debug	r1
+	@ tell it to stop:
+@	ldr	r1, =bit00
+@	ldr	r2, =0
+@	add	r2, r2, r1, lsl #0	@ start
+@	add	r2, r2, r1, lsl #1	@ stop
+@	add	r2, r2, r1, lsl #2	@ master enabled as long as "master disabled" is not set (below)
+@	add	r2, r2, r1, lsl #3	@ master disabled
+@	str	r2, [r0, #TWI_Control_Register_offset]
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		debug	r1
+	pop	r0-r5
+	return
+
+.ifc	asdf,aifgo
+@		debug	r1
+	cmp	r1, #1
+	bNE	checking_which_part_of_this_hundredth_of_a_second_that_we_are_in__done
+checking_which_part_of_this_hundredth_of_a_second_that_we_are_in__1:
+	call	one_hundred_times_per_second_at_one_tenth_of_the_way_through_that_hundredth_of_a_second
+	cmp	r1, #9
+	bNE	checking_which_part_of_this_hundredth_of_a_second_that_we_are_in__done
+	call	one_hundred_times_per_second_at_nine_tenths_of_the_way_through_that_hundredth_of_a_second
+checking_which_part_of_this_hundredth_of_a_second_that_we_are_in__done:
+	@
+	cmp	r3, #10
+	bNE	checking_which_part_of_this_tenth_of_a_second_that_we_are_in__done
+checking_which_part_of_this_tenth_of_a_second_that_we_are_in__1:
+	call	ten_times_per_second_at_one_tenth_of_the_way_through_that_tenth_of_a_second
+	cmp	r3, #90
+	bNE	checking_which_part_of_this_tenth_of_a_second_that_we_are_in__done
+	call	ten_times_per_second_at_nine_tenths_of_the_way_through_that_tenth_of_a_second
+checking_which_part_of_this_tenth_of_a_second_that_we_are_in__done:
+	@
+	cmp	r5, #100
+	bNE	checking_which_part_of_this_second_that_we_are_in__done
+checking_which_part_of_this_second_that_we_are_in__1:
+	call	once_per_second_at_one_tenth_of_the_way_through_that_second
+	cmp	r5, #900
+	bNE	checking_which_part_of_this_second_that_we_are_in__done
+	call	once_per_second_at_nine_tenths_of_the_way_through_that_second
+checking_which_part_of_this_second_that_we_are_in__done:
+.endif
+
+measure_period_of_RCO:
+	push	r0-r12	@ bug/future
+@@	ldr	r0, =timer_counter_channel_for_measuring_frequency_of_RCO
+	.warning	"measure_period_of_RCO doesn't do anything"
+	pop	r0-r12	@ bug/future
+	return
+
+@ the following two are not what we want, because we need a logarithmic table, and this would undo the inherent log that the lab3's oscillator performs for us
+.ifc	asdf,asdf
+fill_dac_a_to_labrador3_frequency_table_logarithmically:
+	push	r0-r12	@ bug/future
+	ldr	r0, =dac_a_minimum_allowable_value
+	ldr	r1, =dac_a_maximum_allowable_value
+	ldr	r2, =dac_a_buffered_value
+	ldr	r3, [r2]
+	ldr	r4, =0b1111111
+	mov	r5, r1
+fill_dac_a_to_labrador3_frequency_table_next_logarithmically:
+	str	r5, [r2]
+	call	update_dac_a_from_buffered_value
+@	delay_ms_imm	number_of_milliseconds=1
+	sub	r5, r1, r4
+	mov	r4, r4, lsl #1
+	cmp	r5, r0
+	bHS	fill_dac_a_to_labrador3_frequency_table_next_logarithmically
+	str	r3, [r2]
+	call	update_dac_a_from_buffered_value
+	pop	r0-r12	@ bug/future
+	return
+.else
+fill_dac_a_to_labrador3_frequency_table_logarithmically:
+	.warning "unfinished function!"
+	push	r0-r12	@ bug/future
+	ldr	r6, =dac_a_minimum_allowable_value
+	ldr	r7, =dac_a_maximum_allowable_value
+	ldr	r8, =dac_a_buffered_value
+	ldr	r9, [r8] @ stored value to restore later
+	@ r10 = integer resulting from multiply and accumulate
+	@ floating point setup:
+	ldr	r0, =1
+	ldr	r1, =-4
+@	call	convert_32bit_fl_to_32bit_fl
+	@ r0, r1 = floating point 1*2^-4 = 1/16 (must not be converted from fl to fl!)
+	push	r0-r1
+	mov	r0, r6
+	mov	r1, =0
+	call	convert_32bit_fl_to_32bit_fl
+	mov	r4, r0
+	mov	r5, r1
+	@ r4, r5 = floating point minimum * 2^0 = minimum
+	pop	r0-r1
+fill_dac_a_to_labrador3_frequency_table_next_logarithmically:
+	str	r5, [r2]
+	call	update_dac_a_from_buffered_value
+@	delay_ms_imm	number_of_milliseconds=1
+	add	r5, r0, r4
+	mov	r4, r4, lsl #1
+	cmp	r5, r1
+	bLS	fill_dac_a_to_labrador3_frequency_table_next_logarithmically
+	str	r3, [r2]
+	call	update_dac_a_from_buffered_value
+	pop	r0-r12	@ bug/future
+	return
+.endif
+
+@	call	old_display_sampling_frequency
+old_display_sampling_frequency:
+	push	r0-r12	@ bug/future
+	ldr	r0, =sampling_frequency
+	ldr	r0, [r0]
+	ldr	r1, =100000000 @ can only fit 8 decimal digits in a 32 bit BCD register
+	cmp	r0, r1
+	bHS	display_sampling_frequency_first_overflow
+	call	convert_hexadecimal_to_BCD
+	b	display_sampling_frequency_next
+display_sampling_frequency_first_overflow:
+	call	convert_hexadecimal_to_BCD_divide_by_1000
+display_sampling_frequency_next:
+	ldr	r1, =sampling_frequency_BCD
+	ldr	r2, [r1]
+	cmp	r0, r2
+	bEQ	display_sampling_frequency_done
+	str	r0, [r1]
+	ldr	r1, =old_sampling_frequency_BCD
+	str	r2, [r1]
+	@
+	ldr	r0, =sampling_frequency
+	ldr	r0, [r0]
+	ldr	r1, =100000000 @ can only fit 8 decimal digits in a 32 bit BCD register
+	cmp	r0, r1
+	bHS	display_sampling_frequency_second_overflow
+	erase_old_and_redraw_new_BCD_integer	address_of_old_value=old_sampling_frequency_BCD, address_of_new_value=sampling_frequency_BCD, x_position=45, y_position=79, type_of_value=word, color=orange
+	b	display_sampling_frequency_done
+display_sampling_frequency_second_overflow:
+	erase_old_and_redraw_new_BCD_integer	address_of_old_value=old_sampling_frequency_BCD, address_of_new_value=sampling_frequency_BCD, x_position=45, y_position=79, type_of_value=word, color=red
+display_sampling_frequency_done:
+@		erase_old_and_redraw_new_integer	address_of_old_value=old_sampling_frequency, address_of_new_value=sampling_frequency, x_position=45, y_position=67, type_of_value=word, color=red
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=old_sampling_frequency, address_of_new_value=sampling_frequency, x_position=45, y_position=79, type_of_value=word, color=orange
+	pop	r0-r12	@ bug/future
+	return
+
+@ junk:
+@	call	convert_32bit_to_32bit_fl
+@	call	make_human_readable_from_32bit_fl
+make_human_readable_from_32bit_fl:
+	@ input is r0 = value
+	@ input is r1 = exponent
+	@ output is human_readable_string
+	push	r0-r12	@ bug/future
+	@ r0 = value
+	@ r1 = exponent
+@	ldr	r1, =human_readable_string
+@make_human_readable_from_32bit_fl_next:
+@	b	make_human_readable_from_32bit_fl_next
+	pop	r0-r12	@ bug/future
+	return
+
+.macro	old_adc_collect_multiple_samples	channel, log_base_2_of_number_of_samples
+	@ destination is r0
+	@ temporary partial sum is r2
+	@ counter is r1
+	push	r1-r2
+	ldr r1, =bit00<<\log_base_2_of_number_of_samples
+	.error "this macro does not work"
+@		ldr r1, =1 @ fudge factor of just one sample
+	ldr	r2, =0
+0:	push	r1-r2
+	@old_adc_collect_one_sample	destination_register=r0, channel=\channel
+	adc_collect_one_sample	channel=\channel
+	pop	r1-r2
+	add	r2, r0, r2
+@	debug	r1
+@	debug	r0
+@	debug	r2
+	dec	r1
+	bNE	0b
+	mov	r0, r0, lsr #\log_base_2_of_number_of_samples
+	pop	r1-r2
+.endm
+		@ r1 = 1 just after a service_button_c call (obsolete)
+
+@ button 1 changes the value that rot enc a modifies when turned
+.ifeq	model-oscilloscoperev00
+service_button_1:
+	push	r0-r12	@ bug/future
+	ldr	r0, =PIOA
+	ldr	r1, =bit00
+	mov	r2, r1, lsl #button_1_port_a_bit
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bNE	service_button_1_done
+service_button_1_wait:
+	wait_for_n_milliseconds	n=number_of_milliseconds_to_debounce_button, saveregs=yes
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bEQ	service_button_1_wait
+	ldr	r0, =rotary_encoder_a_oscilloscope_mode
+	ldrb	r1, [r0]
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	ldr	r2, =rotary_encoder_a_oscilloscope_mode_old
+	strb	r1, [r2]
+	mov	r2, r1
+	inc	r1
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	strb	r1, [r0]
+	cmp	r1, r2
+	ldr	r1, =1
+	bEQ	service_button_1_done
+	ldr	r0, =display_needs_redrawing
+	strb	r1, [r0]
+	call	display_rotary_encoder_a_oscilloscope_mode_info
+@	toggle_general_purpose_output	output=b
+service_button_1_done:
+	pop	r0-r12	@ bug/future
+	return
+.endif
+
+@ button 2 puts the device in shutdown mode
+.ifeq	model-oscilloscoperev00
+service_button_2:
+	push	r0-r12	@ bug/future
+	ldr	r0, =PIOA
+	ldr	r1, =bit00
+	mov	r2, r1, lsl #button_2_port_a_bit
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bNE	service_button_2_done
+service_button_2_wait:
+	wait_for_n_milliseconds	n=number_of_milliseconds_to_debounce_button, saveregs=yes
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bEQ	service_button_2_wait
+	call	shutdown
+@	toggle_general_purpose_output	output=b
+service_button_2_done:
+	pop	r0-r12	@ bug/future
+	return
+.endif
+
+@ ============================================================================
+
+.ifeq	model-prototypeoscilloscope
+service_button_c:
+	push	r0-r12	@ bug/future
+	ldr	r0, =PIOA
+	ldr	r1, =bit00
+	mov	r2, r1, lsl #button_c_port_a_bit
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bNE	service_button_c_done
+service_button_c_wait:
+	wait_for_n_milliseconds	n=number_of_milliseconds_to_debounce_button, saveregs=yes
+	ldr	r3, [r0, #PIO_Controller_Pin_Data_Status_Register_offset]
+	tst	r3, r2
+	bEQ	service_button_c_wait
+	ldr	r0, =rotary_encoder_a_oscilloscope_mode
+	ldrb	r1, [r0]
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	ldr	r2, =rotary_encoder_a_oscilloscope_mode_old
+	strb	r1, [r2]
+	mov	r2, r1
+	inc	r1
+	keep_it_between_signed	min=rotary_encoder_a_oscilloscope_mode_minimum, it=r1, max=rotary_encoder_a_oscilloscope_mode_maximum
+	strb	r1, [r0]
+	cmp	r1, r2
+	ldr	r1, =1
+	bEQ	service_button_c_done
+	ldr	r0, =display_needs_redrawing
+	strb	r1, [r0]
+	call	display_rotary_encoder_a_oscilloscope_mode_info
+@	toggle_general_purpose_output	output=b
+service_button_c_done:
+	pop	r0-r12	@ bug/future
+	return
+.endif
+
+@ this changes the clock face mode
+@ or
+@ this incremements or decrements the value associated with whatever rot enc a controls at the moment (h-scale, v-scale, v-offset)
+service_rotary_encoder_a:
+	push	r0-r12	@ bug/future
+@	check_rotary_encoder_a_status
+	ldr	r0, =rotary_encoder_a_signed_delta_stable
+	ldrsb	r0, [r0]
+	cmp	r0, #0
+	bEQ	service_rotary_encoder_a_done
+@		debug	r0
+@	affect_rotary_encoder_a_change_test_mode
+	.ifeq	function-clock
+		call	affect_rotary_encoder_a_change_clock_face_mode
+	.endif
+	.ifeq	function-oscilloscope
+@		vectored_call	rotary_encoder_a_oscilloscope_mode_minimum, rotary_encoder_a_oscilloscope_mode, rotary_encoder_a_oscilloscope_mode_maximum, rotary_encoder_a_oscilloscope_mode__vector_table
+	.endif
+@	show_rotary_encoder_a_status_test_mode
+service_rotary_encoder_a_done:
+	ldr	r0, =rotary_encoder_a_signed_delta_stable
+	ldr	r1, =0
+	strb	r1, [r0]
+	pop	r0-r12	@ bug/future
+	return
+
+@		call	service_rotary_encoder_a
+	.ifeq	model-oscilloscoperev00
+		@.warning	"still need to write routine to service button 2"
+@		call	service_button_1
+@		call	service_button_2
+	.else
+	.endif
+
+@		call	service_rotary_encoder_a
+
+@		activate_display_write
+@		deactivate_display_write
+
+@	debug_timer_counter_counter_register_values
+	.ifc	asdf,ohsd
+		ldr	r0, =ADC
+		ldr	r1, [r0, #ADC_Status_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #ADC_Status_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #PDC_Transfer_Status_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #PDC_Transfer_Status_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #PDC_Receive_Counter_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #PDC_Receive_Counter_Register_offset]
+	@	debug	r1
+		ldr	r1, [r0, #PDC_Receive_Counter_Register_offset]
+	@	debug	r1
+		ldr	r0, =timer_counter_channel_for_onboard_oscilloscope_triggering
+		ldr	r1, [r0, #TC_Counter_Value_Register_offset]
+	@	debug	r1
+	.endif
+
+@			erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=old_vertical_scale_for_trace_1, address_of_new_value=vertical_scale_for_trace_1, x_position=70, y_position=45, type_of_value=byte, color=green
+@			erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=old_vertical_scale_for_trace_2, address_of_new_value=vertical_scale_for_trace_2, x_position=70, y_position=65, type_of_value=byte, color=red
+@			erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=rotary_encoder_oscilloscope_mode_old, address_of_new_value=rotary_encoder_oscilloscope_mode, x_position=70, y_position=55, type_of_value=byte, color=blue
+@			erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=old_horizontal_scale, address_of_new_value=horizontal_scale, x_position=70, y_position=55, type_of_value=byte, color=green
+
+@ obsolete:
+.macro	old_old_adc_collect_one_sample	destination_register, channel
+	adc_start_conversion	channel=\channel
+	wait_for_adc_channel	channel=\channel
+	load_adc_channel	channel=\channel, destination_register=\destination_register
+.endm
+
+.macro	adc_start_conversion	channel, saveregs=no
+	.ifc \saveregs,yes
+		push	r0-r1
+	.endif
+	ldr	r0, =0b10	@ bit01 is adc start conversion (which is global for all enabled channels)
+	ldr	r1, =ADC
+	str	r0, [r1, #ADC_Control_Register_offset]
+	.ifc \saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	wait_for_adc_channel	channel, saveregs=no
+	.ifc \saveregs,yes
+		push	r0-r2
+		push_flags_through	r0
+	.endif
+	ldr	r0, =ADC
+	ldr	r2, =bit00<<\channel
+0:	ldr	r1, [r0, #ADC_Status_Register_offset]
+	tst	r1, r2
+	bEQ	0b
+	.ifc \saveregs,yes
+		pop_flags_through	r0
+		pop	r0-r2
+	.endif
+.endm
+
+.macro	old_adc_collect_one_sample	channel
+	@ destination is r0
+	push	r1-r3
+	ldr	r0, =ADC
+	ldr	r1, =bit00<<1	@ bit01 is adc start conversion (which is global for all enabled channels)
+@		str	r2, [r0, #ADC_Channel_Enable_Register_offset] @ make sure channel is enabled
+	str	r1, [r0, #ADC_Control_Register_offset]
+	ldr	r2, =bit00<<\channel
+	ldr	r3, =(\channel<<2 + ADC_Channel_Data_Register_0_offset)
+	@ r3 = offset from ADC
+	@ offset from channel #0's data is (4 bytes * channel #)
+@		ldr	r1, [r0, #ADC_Channel_Status_Register_offset]
+@		tst	r1, r2
+@		bEQ	9f @ if the channel is disabled, don't wait forever for end of conversion
+1:	ldr	r1, [r0, #ADC_Status_Register_offset]
+	tst	r1, r2
+	bEQ	1b
+2:
+	ldr	r0, [r0, r3]
+	pop	r1-r3
+.endm
+
+.macro	load_adc_channel	channel, destination_register=r0, saveregs=no
+	@ this alters \destination_register
+	.ifc \saveregs,yes
+		push	r0-r2
+	.endif
+	ldr	r1, =\channel<<2
+	add	r1, r1, #ADC_Channel_Data_Register_0_offset
+	ldr	r0, =ADC
+	.ifc \saveregs,yes
+		ldr	r2, [r0, r1]
+		push	r2
+		pop	r0-r2
+		.error	"this section is wrong"
+	.else
+		ldr	\destination_register, [r0, r1]
+	.endif
+.endm
+
+really_old_determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division:
+	push	r0-r12	@ bug/future
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+		debug	r0
+	@ 1 sample per pixel
+	@ 100 = period of timer/counter in nanoseconds, for a MCK of 20MHz
+	@ 12 = number of pixels per division
+	@ x = number of seconds per division (determined from the horizontal scale)
+	@ clocks_per_sample = desired_seconds_per_div / ( seconds_per_counter_clock * pixels_per_div * samples_per_pixel)
+	@ clocks_per_sample = desired_seconds_per_div * pixels_per_div * samples_per_pixel / seconds_per_counter_clock
+	@ seconds_per_counter_clock = master_clock_frequency divided by either 2^1 or 2^7
+	ldr	r2, =double_precision_fixed_point_shift_by
+	ldr	r3, =0xfff	@ ~12 bits (chosen so that the 20 bit multiply below doesn't overflow a 32 bit register)
+@		debug	r3
+	@ the following is a floating-point multiply operation:
+really_old_determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division_next:
+	cmp	r0, r3
+	movHI	r0, r0, lsr #1
+	subHI	r2, r2, #1
+	bHI	really_old_determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division_next
+	@ at this point, r0 contains a 12 bit representation of the number of
+	@ seconds per division multiplied by 2^r2
+	ldr	r1, =833333	@ ~20MHz/24=20MHz/[2(hardwired limit to t/c relative to mck)*12(pixels_per_div)], which fits within 20 bits
+	mul	r1, r0, r1	@ should not overflow (20+12=32) bits
+	mov	r1, r1, lsr r2
+@		debug	r2
+@		debug	r1
+	ldr	r0, =period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks
+	str	r1, [r0]
+@	ldr	r0, =double_precision_fixed_point_seconds_per_division
+@	ldr	r0, [r0]
+@	ldr	r1, =0
+@	add	r1, r1, r0, lsr #20
+@	add	r1, r1, r0, lsr #22
+@	add	r1, r1, r0, lsr #27
+@	add	r1, r1, r0, lsr #31
+@		debug	r1
+	pop	r0-r12	@ bug/future
+	return
+
+old_determine_period_of_onboard_oscilloscope_sampling_from_horizontal_time_per_division:
+	push	r0-r12	@ bug/future
+	@ 1 sample per pixel
+	@ 100 = period of timer/counter in nanoseconds, for a MCK of 20MHz
+	@ 12 = number of pixels per division
+	@ x = number of seconds per division (determined from the horizontal scale)
+	@ clocks_per_sample = desired_seconds_per_div / ( seconds_per_counter_clock * pixels_per_div * samples_per_pixel)
+	@ seconds_per_counter_clock = 2 divided by master_clock_frequency
+	@ dividing by 2/mck_period is the same as multiplying by mck_freq/2
+	@ actually, I'm a little fuzzy on where the factor of 2 comes in here (is it nyquist?/is it the hardwired factor of 2?)
+	ldr	r1, =master_clock_frequency
+	ldr	r1, [r1]
+		debug	r1 @ 01caf4adh = 30MHz
+	@ divide by 2
+	mov	r1, r1, lsr #1
+	@ divide by 12
+	@ bug/future:  this 12 is hardcoded (and from HP48 program "arm7"/"div" - see notebook page 83)
+	ldr	r2, =0
+	orr	r2, r2, #bit00<<4
+	orr	r2, r2, #bit00<<6
+	orr	r2, r2, #bit00<<8
+	orr	r2, r2, #bit00<<10
+	orr	r2, r2, #bit00<<12
+	orr	r2, r2, #bit00<<14
+	mov	r2, r2, lsl #14 @ not sure why this needs to be here, but it doesn't work otherwise...
+	@ r2 = ~1/12
+	umull	r3, r0, r2, r1
+		debug	r0 @ 131e55h = 1.25M
+@		debug	r3 @ 32380000h = junk
+	mov	r1, r0 @ r1 = mck_freq/24
+	call	find_most_significant_nonzero_bit_position
+		debug	r0 @ 14h = 20d
+	ldr	r5, =31
+	sub	r4, r5, r0 @ r4 = the number of bits we can safely shift r1 left by without overflowing 32 bits
+		debug	r4 @ bh = 11d
+	ldr	r2, =bit00
+	mov	r3, r2, lsl r4
+		debug	r3 @ 800h = 2048d
+	dec	r3
+		debug	r3 @ 7ffh = 2047d
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+		debug	r0 @ 0051eb85h = 5ms
+	mov	r2, r0
+	call	find_most_significant_nonzero_bit_position
+	sub	r3, r5, r0 @ r3 = the number of bits we can safely shift r2 left by without overflowing 32 bits
+		debug	r3 @ 9h = 9d
+	@ r1 = ~ master_clock_frequency / 24
+	@ r2 = double_precision_fixed_point_seconds_per_division (0051eb85h = 5ms)
+	@    = mck_freq/[2(hardwired limit to t/c relative to mck)*12(pixels_per_div)]
+	@ r3 = the number of bits we can safely shift r2 left by without overflowing 32 bits
+	@ r4 = the number of bits we can safely shift r1 left by without overflowing 32 bits
+	@ temporarily multiply r1 by 2^r4 to get best precision
+	mov	r2, r2, lsl r3
+		debug	r2 @ a3d70a00h
+	@ temporarily multiply r2 by 2^r3 to get best precision
+	mov	r1, r1, lsl r4
+		debug	r1 @ 98f2a800h
+	@ multiply r1 by r2 and keep he significant part (high word)
+	umull	r4, r0,  r1, r2
+		debug	r0 @ 61e2fabch
+	@ divide result by 2^(double_precision_fixed_point_shift_by-r3-r4)
+	@ so that we ended up with the most precision (no wasted underflowing bits beyond 32 of them)
+	@ but we also didn't overflow 32 bits in the result
+	@ and the result is 
+	mov	r0, r0, lsr r3
+	mov	r0, r0, lsr r4
+	ldr	r5, =double_precision_fixed_point_shift_by
+	sub	r5, r5, #21 @ not sure why this needs to be here, but it doesn't work otherwise...
+	mov	r0, r0, lsr r5
+		debug	r0
+	@ this ends up being the same at 50us and 100us (so the waveforms look identical on the screen)
+	@ r0 = counter_clocks_per_sample = seconds_per_division * mck_freq / 24
+	ldr	r1, =period_of_onboard_oscilloscope_sample_timer_in_timer_counter_clocks
+	str	r0, [r1]
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+
+test_multiply_routines:
+	push	r0-r12 @ bug/future
+.ifc	l,d
+	ldr	r0, =0
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =0x5678
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	ldr	r0, =0x678
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =0x1043
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	ldr	r0, =2
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =0x80000000
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	ldr	r0, =0x1000
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	mov	r2, r0
+	mov	r3, r1
+	ldr	r0, =0x8080
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+		debug	r0
+		debug	r1
+.endif
+.ifc	a,t
+	ldr	r0, =2
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =3
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =4
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =0x12
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =0x1234
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =0x123456
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+	ldr	r0, =0x12345678
+		debug	r0
+	call	convert_32bit_to_32bit_fl
+		debug	r0
+		debug	r1
+.endif
+.ifc	a,b
+	ldr	r0, =0x3456
+	ldr	r1, =0x1234
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	ldr	r0, =0x34
+	ldr	r1, =0x78
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_fl_result
+		debug	r0
+		debug	r1
+	ldr	r0, =0x1000
+	ldr	r1, =0x9999
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_fl_result
+		debug	r0
+		debug	r1
+.endif
+.ifc	a,b
+	ldr	r0, =0x3456
+	ldr	r1, =0x1234
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_result
+		debug	r0
+	ldr	r0, =0x34
+	ldr	r1, =0x78
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_result
+		debug	r0
+	ldr	r0, =0x1000
+	ldr	r1, =0x9999
+		debug	r0
+		debug	r1
+	call	multiply_32bit_by_32bit_with_32bit_result
+		debug	r0
+.endif
+	pop	r0-r12 @ bug/future
+	return
+
+	.ifc	asdf,fdsa
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		i2c_read_a_byte	address=gpio2_i2c_address
+@		debug	r0
+@		i2c_write_a_byte	address=gpio2_i2c_address, byte_to_write=0
+@		i2c_read_a_byte	address=gpio2_i2c_address
+@		debug	r0
+
+@		i2c_read_a_byte	address=gpio3_i2c_address
+@		debug	r0
+@		i2c_write_a_byte	address=gpio3_i2c_address, byte_to_write=0
+@		i2c_read_a_byte	address=gpio3_i2c_address
+@		debug	r0
+
+		ldr	r0, =1
+@		debug	r0
+		ldr	r3, =gpio1_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+	.endif
+
+	.ifc	asdf,fdsa
+		ldr	r0, =3
+@		debug	r0
+		ldr	r3, =gpio3_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+	.endif
+
+	.ifc	asdf,fdsa
+		ldr	r0, =2
+@		debug	r0
+		ldr	r3, =gpio2_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+
+		ldr	r0, =3
+@		debug	r0
+		ldr	r3, =gpio3_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+	.endif
+
+	.ifc	asdf,fdsa
+		ldr	r0, =0x10001
+@		debug	r0
+		ldr	r3, =gpio1_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+
+		ldr	r0, =0x20001
+@		debug	r0
+		ldr	r3, =gpio1_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+
+		ldr	r0, =2
+@		debug	r0
+		ldr	r3, =gpio2_i2c_address
+		ldr	r4, =0
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =1
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+@		ldr	r4, =2
+@		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r4, =3
+		call	i2c_read_a_byte_with_internal_address
+@		debug	r0
+		ldr	r0, =0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+@		debug	r0
+	.endif
+
+.macro	alternate_initialization_macro
+	setup_watchdog_timer
+	.if	debug
+		setup_debugging_output_lines
+	.endif
+@	call	toggle_general_purpose_output_a
+@	call	toggle_general_purpose_output_a
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+	setup_main_oscillator
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+@	call	toggle_general_purpose_output_a
+@	call	toggle_general_purpose_output_a
+	setup_pll
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+	.ifeq	use_rc_clock_only
+		setup_master_clock
+	.endif
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+@	call	toggle_general_purpose_output_a
+@	call	toggle_general_purpose_output_a
+	clear_ram
+	copy_text_to_data
+	clear_bss
+	setup_user_reset
+@	call	initialize_arm7_for_oled_display_and_initialize_oled_display
+	setup_debug_stack
+	setup_peripheral_clocks
+	call	get_master_clock_frequency
+	setup_periodic_interval_timer
+	setup_timer_counter_channel_for_inline_millisecond_delays
+	setup_button_input_lines	@ this needs the millisecond timer
+	call	initialize_arm7_for_rotary_encoders	@ this needs the millisecond timer
+@	call	toggle_general_purpose_output_a
+@	call	generate_lookup_tables_64
+@	call	toggle_general_purpose_output_a
+@	call	initialize_arm7_for_clock_and_initialize_clock
+	call	initialize_arm7_for_other_stuff
+@	setup_adc
+	setup_debugging_output_lines
+@		call	toggle_general_purpose_output_a
+@		call	toggle_general_purpose_output_a
+	.ifeq	function-oscilloscope
+		call	initialize_arm7_for_oscilloscope_and_initialize_oscilloscope
+	.endif
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+	.ifeq	use_rc_clock_only
+		setup_master_clock	divisor=1
+		call	get_master_clock_frequency
+		setup_periodic_interval_timer
+		setup_timer_counter_channel_for_inline_millisecond_delays
+		.ifeq	function-clock
+			setup_timer_channel_1_to_keep_track_of_partial_seconds
+		.endif
+	.endif
+		call	toggle_general_purpose_output_a_as_fast_as_possible_to_check_processor_speed
+@		call	toggle_general_purpose_output_a
+.endm
+
+@ ============================================================================
+
+.macro	old_setup_master_clock
+	@ rationale for making this work this way is here and below
+	@ (note that we have implemented the safest option)
+	@ see top of page 217 if using pll
+	@ done in this order so you don't kick the master clock to 48MHz and then divide it by 3 to get the processor clock
+	@ but depending on the order the clocks are set, this might still fail (before this function, the rc clock / 1 is selected and the first thing this function does is enable the pll clock / 1 when that's 200 MHz, for example)
+	@ a safe thing to do would be to enable the main clock (derived from the oscillator), divided by 2 or 4 or something and then enable the chosen clock and prescaling one by one
+	@ safest thing would be to set prescaling to /64 and then choose the slow clock (since that's always available and all we're doing is waiting anyway) and then set the desired prescaling and then the desired clock choice
+	@ but since this is the macro that's only called once (and first), it should be okay here
+	set_flash_wait_states_to_one
+	@ bits ???xxx?? are the prescaling factor
+	@ bits ??????xx are the clock selection
+	@ r0 = PMC
+	@ r1 = old master clock register, later mangled
+	@ r2 = new desired clock selection
+	@ r3 = new desired prescaling factor
+	@ r4 = temporary for wait_for_mckrdy macro
+	ldr	r0, =PMC
+	ldr	r1, [r0, #PMC_Master_Clock_Register_offset]
+	@ set prescaling to /64
+	ldr	r3, =0b110	@ set processor clock to master clock / 64
+	and	r1, r1, #0b00011 @ keep the old clock selection
+	add	r1, r1, r3, lsl #2
+	str	r1, [r0, #PMC_Master_Clock_Register_offset]
+	wait_for_mckrdy	temporary_register=r4 @ wait until clock has settled
+	@ select 'slow' rc clock as master clock
+	ldr	r2, =0b00	@ select 'slow' rc clock as master clock
+	and	r1, r1, #0b11100 @ keep the old prescaling factor
+	add	r1, r1, r2
+	str	r1, [r0, #PMC_Master_Clock_Register_offset]
+	wait_for_mckrdy	temporary_register=r4 @ wait until clock has settled
+	.if	use_pll
+		ldr	r2, =0b11	@ select PLL clock as master clock
+	.elseif use_rc_clock_only
+		ldr	r2, =0b00	@ select 'slow' rc clock as master clock
+	.else
+		ldr	r2, =0b01	@ select main oscillator clock as master clock
+	.endif
+	@ desired prescaling factor:
+	ldr	r3, =0b000	@ set processor clock to master clock
+@	ldr	r3, =0b001	@ set processor clock to master clock / 2
+@	ldr	r3, =0b010	@ set processor clock to master clock / 4
+@	ldr	r3, =0b011	@ set processor clock to master clock / 8
+@	ldr	r3, =0b100	@ set processor clock to master clock / 16
+@	ldr	r3, =0b101	@ set processor clock to master clock / 32
+@	ldr	r3, =0b110	@ set processor clock to master clock / 64
+	.if	use_pll
+		and	r1, r1, #0b00011 @ keep the old clock selection
+		add	r1, r1, r3, lsl #2
+	.else
+		@ keep old prescaling factor and choose desired clock (pll or main)
+		and	r1, r1, #0b11100 @ keep the old prescaling factor
+		add	r1, r1, r2
+	.endif
+	str	r1, [r0, #PMC_Master_Clock_Register_offset]
+	@ wait until it has settled
+	wait_for_mckrdy	temporary_register=r4
+	add	r1, r2, r3, lsl #2
+	str	r1, [r0, #PMC_Master_Clock_Register_offset]
+	wait_for_mckrdy	temporary_register=r4
+	determine_and_set_appropriate_flash_wait_states
+.endm
+

@@ -1,0 +1,21 @@
+.data	@ non-zero initialized ram variables (gets stored in flash; must be copied to ram)
+
+single_character_label_for_current_trace:	.byte '?
+
+rotary_encoder_a_oscilloscope_mode:	.byte rotary_encoder_a_oscilloscope_mode_minimum
+rotary_encoder_b_oscilloscope_mode:	.byte rotary_encoder_b_oscilloscope_mode_minimum
+
+@vertical_scale_for_trace_1:	.byte 6
+vertical_scale_for_trace_1:	.byte 5
+vertical_scale_for_trace_2:	.byte 5
+@ 8 = 5ms
+@horizontal_scale:		.byte 22
+horizontal_scale:		.byte 17
+
+@traces_to_display:	.byte	
+
+acquiring_dac_a_to_labrador3_frequency_table:	.byte 1
+
+@single_character_label_for_trace_1:	.byte 'A
+@single_character_label_for_trace_2:	.byte 'B
+

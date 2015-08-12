@@ -1,0 +1,199 @@
+@ copyright 2007 mza (Matthew Andrew)
+@ started 2007-09-19 (talk like a pirate day)
+
+@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@
+
+.macro	toggle_general_purpose_output	output
+	push	r0-r1
+	ldr	r0, =general_purpose_output_toggle_status
+	ldrb	r1, [r0]
+	inc	r1
+	strb	r1, [r0]
+	tst	r1, #bit00
+	bEQ	7f
+	turn_on_general_purpose_output	output=\output, saveregs=yes
+	b	9f
+7:
+	turn_off_general_purpose_output	output=\output, saveregs=yes
+9:
+	pop	r0-r1
+.endm
+
+@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@
+
+.macro	turn_on_led	saveregs=no
+	turn_off_port_a_bit	#8, saveregs=\saveregs
+.endm
+
+.macro	turn_off_led	saveregs=no
+	turn_on_port_a_bit	#8, saveregs=\saveregs
+.endm
+
+@.macro	display_activate_signal	signal, saveregs=no
+@.macro	display_deactivate_signal	signal, saveregs=no
+
+@.macro	set_bit_in_parallel_io_port_a_controller_register	bit:req, address_offset:req
+
+.macro	set_bitmask_in_parallel_io_port_a_controller_register	bitmask_register, address_offset, saveregs=no
+	set_bitmask_in_system_controller_register	bitmask_register=\bitmask_register, address_base=PIOA, address_offset=\address_offset, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro	set_bitmask_in_parallel_io_port_b_controller_register	bitmask_register, address_offset, saveregs=no
+	set_bitmask_in_system_controller_register	bitmask_register=\bitmask_register, address_base=PIOB, address_offset=\address_offset, saveregs=\saveregs
+.endm
+.endif
+
+.macro	set_bit_in_parallel_io_port_a_controller_register	bit, address_offset, saveregs=no
+	set_bit_in_system_controller_register	bit=\bit, address_base=PIOA, address_offset=\address_offset, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro	set_bit_in_parallel_io_port_b_controller_register	bit, address_offset, saveregs=no
+	set_bit_in_system_controller_register	bit=\bit, address_base=PIOB, address_offset=\address_offset, saveregs=\saveregs
+.endm
+.endif
+
+.macro set_bit_in_output_register_for_port_a	bit, saveregs=no
+	set_bit_in_parallel_io_port_a_controller_register	bit=\bit, address_offset=Set_Output_Data_Register_offset, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro set_bit_in_output_register_for_port_b	bit, saveregs=no
+	set_bit_in_parallel_io_port_b_controller_register	bit=\bit, address_offset=Set_Output_Data_Register_offset, saveregs=\saveregs
+.endm
+.endif
+
+.macro clear_bit_in_output_register_for_port_a	bit, saveregs=no
+	set_bit_in_parallel_io_port_a_controller_register	bit=\bit, address_offset=Clear_Output_Data_Register_offset, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro clear_bit_in_output_register_for_port_b	bit, saveregs=no
+	set_bit_in_parallel_io_port_b_controller_register	bit=\bit, address_offset=Clear_Output_Data_Register_offset, saveregs=\saveregs
+.endm
+.endif
+
+.macro	turn_on_port_a_bit	bit, saveregs=no
+	set_bit_in_output_register_for_port_a	bit=\bit, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro	turn_on_port_b_bit	bit, saveregs=no
+	set_bit_in_output_register_for_port_b	bit=\bit, saveregs=\saveregs
+.endm
+.endif
+
+.macro	turn_off_port_a_bit	bit, saveregs=no
+	clear_bit_in_output_register_for_port_a	bit=\bit, saveregs=\saveregs
+.endm
+
+.ifne	parallel_io_port_b_available
+.macro	turn_off_port_b_bit	bit, saveregs=no
+	clear_bit_in_output_register_for_port_b	bit=\bit, saveregs=\saveregs
+.endm
+.endif
+
+.macro	pulse_port_a_bit_off_and_on	bit, saveregs=no
+	.ifc \saveregs,yes
+		push	r0-r1
+	.endif
+	turn_off_port_a_bit	bit=\bit, saveregs=no	@ this assumes turn_off and turn_on macros only use r0 and r1
+	turn_on_port_a_bit	bit=\bit, saveregs=no
+	.ifc \saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	pulse_port_a_bit_on_and_off	bit, saveregs=no
+	.ifc \saveregs,yes
+		push	r0-r1
+	.endif
+	turn_on_port_a_bit	bit=\bit, saveregs=no	@ this assumes turn_off and turn_on macros only use r0 and r1
+	turn_off_port_a_bit	bit=\bit, saveregs=no
+	.ifc \saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	pulse_general_purpose_output	output, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r1
+	.endif
+	ldr	r0, =PIOA
+	.ifc	\output,a
+		mov	r1, #bit00<<general_purpose_output_a
+	.endif
+	.ifc	\output,b
+		mov	r1, #bit00<<general_purpose_output_b
+	.endif
+	.ifc	\output,c
+		mov	r1, #bit00<<general_purpose_output_c
+	.endif
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	.ifc	\saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	turn_on_general_purpose_output	output, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r1
+	.endif
+	ldr	r0, =PIOA
+	ldr	r1, =bit00
+	.ifc	\output,a
+		mov	r1, r1, lsl #general_purpose_output_a
+	.endif
+	.ifc	\output,b
+		mov	r1, r1, lsl #general_purpose_output_b
+	.endif
+	.ifc	\output,c
+		mov	r1, r1, lsl #general_purpose_output_c
+	.endif
+@	.else
+@		mov	r1, r1, lsl #general_purpose_output_a
+@		.warning "not supposed to get here"
+@		.error
+@	.endif
+@	str	r1, [r0, #Clear_Output_Data_Register_offset]
+	str	r1, [r0, #Set_Output_Data_Register_offset]
+	.ifc	\saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	turn_off_general_purpose_output	output, saveregs=no
+	.ifc	\saveregs,yes
+		push	r0-r1
+	.endif
+	ldr	r0, =PIOA
+	ldr	r1, =bit00
+	.ifc	\output,a
+		mov	r1, r1, lsl #general_purpose_output_a
+	.endif
+	.ifc	\output,b
+		mov	r1, r1, lsl #general_purpose_output_b
+	.endif
+	.ifc	\output,c
+		mov	r1, r1, lsl #general_purpose_output_c
+	.endif
+@	.else
+@		mov	r1, r1, lsl #general_purpose_output_a
+@		.warning "not supposed to get here"
+@		.error
+@	.endif
+	str	r1, [r0, #Clear_Output_Data_Register_offset]
+@	str	r1, [r0, #Set_Output_Data_Register_offset]
+	.ifc	\saveregs,yes
+		pop	r0-r1
+	.endif
+.endm
+
+.macro	store_register_in_data_bus	register, saveregs=no
+	store_register_in_base_plus_offset_address	\register, PIOA, Output_Data_Status_Register_offset, saveregs
+.endm
+
+@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@	@
+

@@ -1,0 +1,43 @@
+#!/bin/bash -e
+
+declare base_dir="$(dirname $0)/.."
+cd "${base_dir}"
+declare script_dir="./scripts"
+. "${script_dir}/script_functions"
+
+# this follows grep's usage of -h/-H:
+declare print_filenames_string="-H"
+declare print_comments_string="--no-comments"
+for each; do
+	if [ "${each}" = "-H" ]; then
+		print_filenames_string="-H"
+	elif [ "${each}" = "-h" ]; then
+		print_filenames_string="-h"
+	fi
+	if [ "${each}" = "--no-comments" ]; then
+		print_comments_string="--no-comments"
+	elif [ "${each}" = "--comments" ]; then
+		print_comments_string="--comments"
+	fi
+done
+
+if [ "${print_comments_string}" = "--no-comments" ]; then
+	${script_dir}/filter_out_comments ${print_filenames_string} $(find src -type f)
+else
+	if [ "${print_filenames_string}" = "-H" ]; then
+		#cat $(find src -type f)
+		for each in $(find src -type f); do
+			cat "${each}" | prepend_filename
+		done
+	else
+		for each in $(find src -type f); do
+			cat "${each}"
+		done
+	fi
+fi
+
+#${script_dir}/filter_out_comments ${print_filenames_string} $(find src -type f)
+#for each in $(find src -type f); do
+#	${script_dir}/filter_out_comments ${print_filenames_string} ${each}
+#done
+

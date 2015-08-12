@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+declare base_dir="$(dirname $0)/.."
+
+declare list=${@}
+if [ -z "${list}" ] || [ "${list}" = " " ]; then
+	list=$(${base_dir}/scripts/print_list_of_macros | grep -v 'return\|call')
+fi
+
+for each in ${list}; do
+	echo
+	echo "macro ${each}:"
+	${base_dir}/scripts/cat_all_source_files -H | grep "${each}"
+done
+

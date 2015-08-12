@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+#grep -r debug src/* | grep -v ':@' | sed -e "s/\([^:]*\):\([ \t]*\)\(debug\)/\1:\t\2\3\3/" | grep debugdebug | sed -e "s/debugdebug/debug/" | grep -v '\.perl:'
+declare base_dir="$(dirname $0)/.."
+cd "${base_dir}"
+grep -rn debug src/* | grep -v ':@' | sed -e "s/\([^:]*\):\([ \t]*\)\(debug\)/\1:\t\2\3\3/" | grep debugdebug | sed -e "s/debugdebug/debug/" | grep -v '\.perl:'
+
+#declare base_dir="$(dirname $0)/.."
+#${base_dir}/scripts/cat_all_source_files -H | grep "${each}"
+#| sed -e "s/\([^:]*\):\([ \t]*\)\(debug\)/\1:\t\2\3\3/" | grep debugdebug | sed -e "s/debugdebug/debug/" | grep -v '\.perl:'
+

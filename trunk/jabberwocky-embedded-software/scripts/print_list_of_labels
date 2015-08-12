@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+#declare dir="$(dirname $0)/../src"
+#grep -r '^[^ ]*:' ${dir}/* | sed -e "s,\([^: ]\+\):\([^: \t]\+\):.*,\2,"
+
+declare base_dir="$(dirname $0)/.."
+declare script_dir="${base_dir}/scripts"
+declare source_dir="${base_dir}/src"
+
+${script_dir}/cat_all_source_files -h --no-comments | grep '^[^ ,:]*:' | sed -e "s,^\([^\t ,:]\+\):.*,\1," | grep -v "\.string"
+

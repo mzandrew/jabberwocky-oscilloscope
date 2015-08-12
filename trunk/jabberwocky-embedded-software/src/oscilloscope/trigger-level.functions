@@ -1,0 +1,283 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ some equations:
+@ scaled & offset analog input range = (0.5V,2V)
+@ scaled & offset analog mid-range voltage = 1.25V
+@ dac range = (0,2^14-1))
+@ actual trigger voltage = 3.3V * dac value / 2^14
+@ scaled & offset trigger voltage = -(4V*3.3V/1.5V)*(dac value-(1.25V/3.3V)*2^14)/2^14
+@                                 = -(4V/1.5V)*[(3.3V*dac value)/2^14-1.25V]
+@                                 = -(4V/1.5V)*[actual trigger voltage-1.25V]
+@                                 = -(4V)*[((3.3V/1.5V)*dac value)/2^14-(1.25V/1.5V)]
+
+@ volts per pixel = volts per division / pixels per division
+@                 = -(4V/1.5V)*[(3.3V*dac steps per pixel)/2^14]
+@ dac steps per pixel = -2^14 * [(1.5V/{4V*3.3V}) * volts per pixel]
+@                     = -(2^14*1.5V)/(4V*3.3V*pixels per division)*volts per division @                     = 155.151515152 * volts per division
+.set	TRIGGER_DAC__STEPS_PER_PIXEL_CONSTANT__MANTISSA, 0x4d9364d8
+.set	TRIGGER_DAC__STEPS_PER_PIXEL_CONSTANT__EXPONENT, -23
+
+@ TRIGGER_DAC__OFFSET = 1.25V:
+@.set	TRIGGER_DAC__OFFSET_MANTISSA, 0x50000000
+@.set	TRIGGER_DAC__OFFSET_EXPONENT, -30
+
+.set	ONE_TWELVTH__MANTISSA, 0x55555554
+.set	ONE_TWELVTH__EXPONENT, -34
+
+calculate_number_of_trigger_level_dac_steps_per_onscreen_pixel:
+	push	r0-r12 @ bug/future
+	ldr	r0, =TRIGGER_DAC__STEPS_PER_PIXEL_CONSTANT__MANTISSA
+	ldr	r1, =TRIGGER_DAC__STEPS_PER_PIXEL_CONSTANT__EXPONENT
+@	add	r1, r1, #4 @ i2c broken - is on (-64V,64V) setting instead of (-2V,2V) setting
+	call	convert_32bit_fl_to_32bit_fl
+	call	swap_floats
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	call	convert_fixed_point_to_32bit_fl
+	ldr	r4, =log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace
+	ldr	r4, [r4]
+	add	r1, r1, r4
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	call	convert_32bit_fl_to_32bit
+	ldr	r1, =trigger_level_dac_steps_per_onscreen_pixel
+	str	r0, [r1]
+		debug r0
+@	ldr	r0, =
+@	ldr	r0, =inverse_of_the_vertical_scale_in_divisions_per_Volt_for_the_current_trace @ an integer, not a fixed point value
+@	ldr	r0, =number_of_pixels_per_vertical_division
+	pop	r0-r12 @ bug/future
+	return
+
+calculate_trigger_voltage_from_dac_setting:
+	push	r0-r12
+	@ actual trigger voltage = (3.3V*dac value)/2^14
+	@ trigger voltage = -(4V/1.5V)*[(3.3V*dac value)/2^14-1.25V]
+	ldr	r0, =trigger_level
+	ldr	r0, [r0]
+	call	convert_32bit_to_32bit_fl
+@		call	debug_32bit_fl__unity
+	sub	r1, r1, #14
+@		call	debug_32bit_fl__milli
+	call	swap_floats
+@	ldr	r0, =0xd3333332
+@	ldr	r1, =-30
+	ldr	r0, =0x69999998
+	ldr	r1, =-29
+	call	convert_32bit_fl_to_32bit_fl
+	@ r0,r1 ~= 3.3
+@		call	debug_32bit_fl__milli
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+@		call	debug_32bit_fl__milli
+	ldr	r2, =actual_trigger_voltage__mantissa
+	ldr	r3, =actual_trigger_voltage__exponent
+	str	r0, [r2]
+	str	r1, [r3]
+@		call	debug_32bit_fl__milli
+	call	swap_floats
+	@ bug/future:  this is a hardcoded fudge (2009-06-30):
+	.ifc	asdf,abae
+		@ (0V,3.3V) -> (0V,1.5V)
+@		ldr	r0, =0xe8ba2e88
+@		ldr	r1, =-33
+		ldr	r0, =0x745d144
+		ldr	r1, =-32
+		call	convert_32bit_fl_to_32bit_fl
+		@ r0,r1 ~= 1.5/3.3
+		call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+@			call	debug_32bit_fl__milli
+		call	swap_floats
+		@ (0V,1.5V) -> (0.5V,2V) 
+		ldr	r0, =0x40000000
+		ldr	r1, =-31
+		call	convert_32bit_fl_to_32bit_fl
+		@ r0,r1 = 0.5
+		call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@			call	debug_32bit_fl__milli
+	.else
+	@ trigger voltage = -(4V/1.5V)*[actual trigger voltage-1.25V]
+@			ldr	r0, =0x12341234
+@			debug	r0
+		@ (2V, 0.5V) -> (0.75V,-0.75V): subtract 1.25V
+		ldr	r0, =0x50000000
+		ldr	r1, =-30
+		call	convert_32bit_fl_to_32bit_fl
+		@ r0,r1 = 1.25
+@			call	debug_32bit_fl__milli
+		call	negate_32bit_fl
+		@ r0,r1 = -1.25
+@			call	debug_32bit_fl__milli
+		call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@			call	debug_32bit_fl__milli
+		@ (0.75V,-0.75V) -> (-0.75V,0.75V): negate
+		call	negate_32bit_fl
+@			call	debug_32bit_fl__milli
+@		@ (2V, 0.5V) -> (-0.5V,-2V): negate
+@		@ (-0.5V,-2V) -> (0.75V,-0.75V): add 1.25V
+		@
+		call	swap_floats
+		@ (-0.75V,0.75V) -> (-2V,2V): multiply by 4V/1.5V
+		ldr	r0, =0x55555554
+		ldr	r1, =-29
+		call	convert_32bit_fl_to_32bit_fl
+		@ r0,r1 ~= 4/1.5
+		call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	.endif
+	ldr	r2, =trigger_voltage__mantissa
+	ldr	r3, =trigger_voltage__exponent
+	str	r0, [r2]
+	str	r1, [r3]
+@		call	debug_32bit_fl__milli
+	pop	r0-r12
+	return
+
+draw_trigger_line:
+	push	r0-r12
+@		ldr	r0, =0x88880000
+@		debug	r0
+@	call	calculate_fixed_point_divisions_from_fixed_point_pixels
+	ldr	r0, =trigger_voltage__mantissa
+	ldr	r0, [r0]
+	ldr	r1, =trigger_voltage__exponent
+	ldr	r1, [r1]
+@		call	debug_32bit_fl__milli
+@		call	debug_32bit_fl__unity
+@		ldr	r0, =1
+@		call	convert_32bit_to_32bit_fl
+	call	swap_floats
+	ldr	r0, =inverse_of_the_vertical_scale_in_divisions_per_Volt_for_the_current_trace @ an integer, not a fixed point value
+	ldr	r0, [r0]
+	cmp	r0, #1
+	bEQ	draw_trigger_line_b
+draw_trigger_line_a:
+@		ldr	r5, =0xaaaaaaaa
+@		debug	r5
+@		debug	r0
+	call	convert_32bit_to_32bit_fl
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	@ r0,r1 is the number of divisions above the 0V position where the trigger line should be drawn
+	b	draw_trigger_line_c
+draw_trigger_line_b:
+@		ldr	r0, =0xbbbbbbbb
+@		debug	r0
+@	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, =fixed_point_divisions_per_Volt_for_the_current_trace
+@	.warning "for >1V/div, this won't work as-is (2009-06-30)"
+	ldr	r0, [r0]
+@		debug	r0
+	call	convert_fixed_point_to_32bit_fl
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+@	call	convert_32bit_fl_to_32bit
+@		debug	r0
+draw_trigger_line_c:
+	call	swap_floats
+	ldr	r0, =number_of_pixels_per_vertical_division
+	call	convert_32bit_to_32bit_fl
+	call	multiply_32bit_fl_by_32bit_fl_with_32bit_fl_result
+	call	convert_32bit_fl_to_32bit
+@		debug	r0
+@	mul	r0, r1, r0
+@		debug	r0
+@	call	swap_floats
+@	ldr	r0, =vertical_offset_in_fixed_point_divisions_for_the_current_trace
+	ldr	r1, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r1, [r1]
+@		debug	r1
+	add	r0, r0, r1
+@		debug	r0
+	ldr	r1, =trace_drawing_area_center_y
+	add	r0, r0, r1
+@		debug	r0
+@	call	convert_fixed_point_to_32bit_fl
+@	call	add_32bit_fl_to_32bit_fl_with_32bit_fl_result
+@	call	convert_32bit_fl_to_32bit
+	ldr	r1, =trace_drawing_area_first_y
+	ldr	r2, =trace_drawing_area_last_y
+	sub	r0, r2, r0
+@		debug	r0
+	cmp	r0, r1
+	bLO	draw_trigger_line__done
+	cmp	r0, r2
+	bHI	draw_trigger_line__done
+	ldr	r1, =trace_drawing_area_first_x
+	ldr	r2, =trace_drawing_area_last_x
+	ldr	r3, =trigger_level_line_color
+	ldr	r3, [r3]
+	draw_line	top_register=r0, bottom_register=r0, left_register=r1, right_register=r2, color_register=r3
+	delay_imm	60 @ bug/future:  value?
+@		ldr	r0, =0xcccccccc
+@		debug	r0
+draw_trigger_line__done:
+	pop	r0-r12
+	return
+
+erase_trigger_line_for_trace_1:
+	push	r0-r12
+@	ldr	r0, =trigger_level_for_trace_1
+	ldr	r0, =old_trigger_level_for_trace_1
+	ldr	r0, [r0]	
+	ldr	r1, =trigger_level
+	str	r0, [r1]
+@	ldr	r0, =blue
+@@	ldr	r0, =background_color
+	ldr	r0, =red
+	ldr	r1, =trigger_level_line_color
+	str	r0, [r1]
+@	call	draw_trigger_line
+	pop	r0-r12
+	return
+
+draw_trigger_line_for_trace_1:
+	push	r0-r12
+	call	calculate_trigger_voltage_from_dac_setting
+	ldr	r0, =trigger_level_for_trace_1
+@	ldr	r0, =old_trigger_level_for_trace_1
+	ldr	r0, [r0]	
+	ldr	r1, =trigger_level
+	str	r0, [r1]
+	ldr	r0, =blue
+@	ldr	r0, =background_color
+	ldr	r1, =trigger_level_line_color
+	str	r0, [r1]
+@	call	draw_trigger_line
+	ldr	r0, =trigger_level_for_trace_1
+	ldr	r2, [r0]
+	ldr	r1, =old_trigger_level_for_trace_1
+	str	r2, [r1]
+	pop	r0-r12
+	return
+
+change_trigger_level_for_trace_1:
+	push	r0-r12
+	ldr	r2, =rotary_encoder_b_signed_delta_stable
+	ldrsb	r1, [r2]
+	@ r1 = -1 or +1
+	ldr	r0, =trigger_level_for_trace_1
+	ldr	r2, [r0]
+	@ r2 = original trigger level
+	ldr	r3, =trigger_level_dac_steps_per_onscreen_pixel
+	ldr	r3, [r3]
+	@ r3 = delta
+@	cmp	r1, #0
+@	ldr	r3, =10
+	smull	r4, r5, r1, r3
+@	rsb	r1, r1
+@	add	r2, r2, r1
+	sub	r2, r2, r4
+	keep_it_between_signed_ping_pong	min=TRIGGER_LEVEL__MINIMUM, it=r2, max=TRIGGER_LEVEL__MAXIMUM
+	str	r2, [r0]
+	ldr	r0, =dac_b_buffered_value
+	str	r2, [r0]
+	call	predicate_change_to_trigger_level_for_trace_1
+	pop	r0-r12
+	return
+
+predicate_change_to_trigger_level_for_trace_1:
+	push	r0-r12
+	call	update_dac_b_from_buffered_value
+	call	set_flag__display_needs_redrawing
+@		erase_old_and_redraw_new_integer	address_of_old_value=dac_b_buffered_value, address_of_new_value=dac_b_buffered_value, x_position=58, y_position=42, type_of_value=word, color=red
+	pop	r0-r12
+	return
+

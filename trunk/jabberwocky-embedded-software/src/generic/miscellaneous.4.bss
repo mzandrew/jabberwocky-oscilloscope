@@ -1,0 +1,31 @@
+.bss @ zero-initialized ram variables (doesn't get stored in flash; has to be initialized)
+
+.align 2
+exception_link_register:	.word 0
+exception_type:	.word 0
+exception_temporary_1:	.word 0
+exception_temporary_2:	.word 0
+
+.align 2
+dummy_1:	.word	0
+dummy_2:	.word	0
+dummy_3:	.word	0
+dummy_4:	.word	0
+
+.align 2
+main_clock_frequency: .word 0
+pll_clock_frequency:	.word 0
+master_clock_frequency: .word 0
+current_master_clock_frequency: .word 0 @ for hex to dec display
+previous_master_clock_frequency: .word 0 @ for hex to dec display
+timer_frequency: .word 0
+number_of_timer_clock_ticks_in_one_millisecond: .word 0
+number_of_TCX_clock_periods_in_one_millisecond:	.word 0
+number_of_TC1_clock_periods_in_one_tenth_of_a_second: .word 0
+
+ratio_fp:	.word 0
+
+counter__seconds:	.word 0
+
+how_many_millisecond_periods_we_missed:	.word 0
+

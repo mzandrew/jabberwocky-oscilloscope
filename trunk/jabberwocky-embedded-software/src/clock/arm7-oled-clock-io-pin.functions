@@ -1,0 +1,22 @@
+affect_rotary_encoder_a_change_clock_face_mode:
+	push	r1-r12	@ bug/future
+	ldr	r3, =rotary_encoder_a_signed_delta_stable
+	ldrsb	r1, [r3]
+	cmp	r1, #0
+	bEQ	affect_rotary_encoder_a_change_clock_face_mode_done
+	ldr	r0, =clock_face_mode
+	ldrb	r2, [r0]
+	keep_it_between_signed	min=clock_face_mode_minimum, it=r2, max=clock_face_mode_maximum
+	add	r1, r1, r2
+	keep_it_between_signed	min=clock_face_mode_minimum, it=r1, max=clock_face_mode_maximum
+	strb	r1, [r0]
+	ldr	r0, =0
+	strb	r0, [r3]
+	call	prepare_screen_for_drawing_on_it
+	ldr	r0, =display_needs_redrawing
+	ldr	r1, =1
+	strb	r1, [r0]
+affect_rotary_encoder_a_change_clock_face_mode_done:
+	pop	r1-r12	@ bug/future
+	return
+

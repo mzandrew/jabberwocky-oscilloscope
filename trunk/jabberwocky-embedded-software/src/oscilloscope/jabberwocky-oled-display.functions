@@ -1,0 +1,788 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+draw_supplementary_info:
+	call	display_time_per_division
+@	call	display_sampling_frequency
+@	call	display_human_readable_sampling_frequency
+	return
+
+@ horizontal_scale_minimum horizontal_scale_maximum vertical_scale_minimum vertical_scale_maximum
+@ vertical_scale horizontal_scale vertical_scale_trace_1 horizontal_scale_trace_1 vertical_scale_trace_2 horizontal_scale_trace_2
+
+display_rotary_encoder_a_oscilloscope_mode_info:
+	@ this function displays what it is that rot enc a is currently controlling
+	@ h-scale, v-scale, v-offset, etc
+	push	r0-r3	@ bug/future
+	ldr	r0, =rotary_encoder_a_oscilloscope_mode
+	ldrb	r0, [r0]
+	@ these are defaults, but they should never be seen:
+	ldr	r2, =jabberwocky
+	ldr	r3, =color_for_channel_a_info
+	cmp	r0, #rotary_encoder_a_oscilloscope_mode_change_vertical_scale_for_channel_a
+	ldrEQ	r2, =rotary_encoder_a_oscilloscope_mode_change_vertical_scale_for_channel_a_string
+	ldrEQ	r3, =color_for_channel_a_info
+	cmp	r0, #rotary_encoder_a_oscilloscope_mode_change_vertical_offset_for_channel_a
+	ldrEQ	r2, =rotary_encoder_a_oscilloscope_mode_change_vertical_offset_for_channel_a_string
+	ldrEQ	r3, =color_for_channel_a_info
+	ldr	r0, =address_of_current_character_in_string
+	str	r2, [r0]
+	ldr	r0, =font_color
+	ldr	r3, [r3]
+	str	r3, [r0]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =position_of_center_of_first_character_in_global_info_1_x
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =position_of_center_of_first_character_in_global_info_1_y
+	strb	r1, [r0]
+	call	display_a_string
+	pop	r0-r3	@ bug/future
+	return
+
+display_rotary_encoder_b_oscilloscope_mode_info:
+	@ this function displays what it is that rot enc b is currently controlling
+	@ h-scale, v-scale, v-offset, etc
+	push	r0-r3	@ bug/future
+	ldr	r0, =rotary_encoder_b_oscilloscope_mode
+	ldrb	r0, [r0]
+	@ these are defaults, but they should never be seen:
+	ldr	r2, =jabberwocky
+	ldr	r3, =color_for_channel_a_info
+	cmp	r0, #rotary_encoder_b_oscilloscope_mode_change_horizontal_scale_for_channel_a
+	ldrEQ	r2, =rotary_encoder_b_oscilloscope_mode_change_horizontal_scale_for_channel_a_string
+	ldrEQ	r3, =color_for_horizontal_info
+	ldr	r0, =address_of_current_character_in_string
+	str	r2, [r0]
+	ldr	r0, =font_color
+	ldr	r3, [r3]
+	str	r3, [r0]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =position_of_center_of_first_character_in_global_info_2_x
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =position_of_center_of_first_character_in_global_info_2_y
+	strb	r1, [r0]
+	call	display_a_string
+	pop	r0-r3	@ bug/future
+	return
+
+display_time_per_division:
+	push	r0-r12	@ bug/future
+	ldr	r0, =position_of_center_of_first_character_y_of_horizontal_info_1
+	ldr	r1, =position_of_center_of_current_character_y
+	strb	r0, [r1]
+	ldr	r0, =position_of_center_of_first_character_x_of_horizontal_info_1
+	ldr	r1, =position_of_center_of_current_character_x
+	strb	r0, [r1]
+	ldr	r0, =color_for_horizontal_info
+	ldr	r0, [r0]
+	ldr	r1, =font_color
+	str	r0, [r1]
+@		ldr	r0, =0x99999999
+@		debug	r0
+	ldr	r0, =double_precision_fixed_point_seconds_per_division
+	ldr	r0, [r0]
+@		debug	r0
+	ldr	r1, =nanoseconds_001
+	ldr	r2, =double_precision_fixed_point__zero_point_000000002
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_002
+	ldr	r2, =double_precision_fixed_point__zero_point_000000005
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_005
+	ldr	r2, =double_precision_fixed_point__zero_point_000000010
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_010
+	ldr	r2, =double_precision_fixed_point__zero_point_000000020
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_020
+	ldr	r2, =double_precision_fixed_point__zero_point_000000050
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_050
+	ldr	r2, =double_precision_fixed_point__zero_point_000000100
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_100
+	ldr	r2, =double_precision_fixed_point__zero_point_000000200
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_200
+	ldr	r2, =double_precision_fixed_point__zero_point_000000500
+	cmp	r0, r2
+	ldrHS	r1, =nanoseconds_500
+	@
+	ldr	r2, =double_precision_fixed_point__zero_point_000001000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_001
+	ldr	r2, =double_precision_fixed_point__zero_point_000002000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_002
+	ldr	r2, =double_precision_fixed_point__zero_point_000005000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_005
+	ldr	r2, =double_precision_fixed_point__zero_point_000010000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_010
+	ldr	r2, =double_precision_fixed_point__zero_point_000020000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_020
+	ldr	r2, =double_precision_fixed_point__zero_point_000050000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_050
+	ldr	r2, =double_precision_fixed_point__zero_point_000100000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_100
+	ldr	r2, =double_precision_fixed_point__zero_point_000200000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_200
+	ldr	r2, =double_precision_fixed_point__zero_point_000500000
+	cmp	r0, r2
+	ldrHS	r1, =microseconds_500
+	@
+	ldr	r2, =double_precision_fixed_point__zero_point_001000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_001
+	ldr	r2, =double_precision_fixed_point__zero_point_002000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_002
+	ldr	r2, =double_precision_fixed_point__zero_point_005000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_005
+	ldr	r2, =double_precision_fixed_point__zero_point_010000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_010
+	ldr	r2, =double_precision_fixed_point__zero_point_020000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_020
+	ldr	r2, =double_precision_fixed_point__zero_point_050000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_050
+	ldr	r2, =double_precision_fixed_point__zero_point_100000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_100
+	ldr	r2, =double_precision_fixed_point__zero_point_200000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_200
+	ldr	r2, =double_precision_fixed_point__zero_point_500000000
+	cmp	r0, r2
+	ldrHS	r1, =milliseconds_500
+	@
+	ldr	r2, =double_precision_fixed_point__one
+	cmp	r0, r2
+	ldrHS	r1, =seconds_one
+	ldr	r0, =address_of_current_character_in_string
+	str	r1, [r0]
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+display_sampling_frequency:
+	push	r0-r12	@ bug/future
+	ldr	r0, =sampling_frequency
+	ldr	r0, [r0]
+	call	convert_32bit_ui_to_string
+	ldr	r0, =itoa_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =58
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =79
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =red
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+display_human_readable_sampling_frequency:
+	push	r0-r12	@ bug/future
+	ldr	r0, =sampling_frequency
+	ldr	r0, [r0]
+	call	make_human_readable_from_32bit_i
+	ldr	r0, =human_readable_string
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_current_character_x
+	ldr	r1, =10
+	strb	r1, [r0]
+	ldr	r0, =position_of_center_of_current_character_y
+	ldr	r1, =79
+	strb	r1, [r0]
+	ldr	r0, =font_color
+	ldr	r1, =yellow
+	str	r1, [r0]
+	call	display_a_string
+	ldr	r0, =beginning_of_temporary_string_8_characters
+	ldr	r1, =address_of_current_character_in_string
+	str	r0, [r1]
+	ldr	r1, ='H
+	strb	r1, [r0], #1
+	ldr	r1, ='z
+	strb	r1, [r0], #1
+	ldr	r1, =0
+	strb	r1, [r0], #1
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+@ Voltage_string_length_including_termination Voltage_threshold_length Voltage_table_beginning Voltage_table_element_length Voltage_threshold_offset_from_beginning_of_element
+
+display_Volts_per_division_for_trace_1:
+	push	r0-r12	@ bug/future
+	ldr	r0, =fixed_point_Volts_per_division_for_trace_1
+	ldr	r1, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	ldr	r0, =color_for_channel_a_info
+	ldr	r1, =color_for_the_current_trace_info
+	ldr	r0, [r0]
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_first_character_y_of_info_1_for_trace_1
+	ldr	r1, =position_of_center_of_current_character_y
+	strb	r0, [r1]
+	ldr	r0, =position_of_center_of_first_character_x_of_info_1_for_trace_1
+	ldr	r1, =position_of_center_of_current_character_x
+	strb	r0, [r1]
+	call	display_Volts_per_division
+	pop	r0-r12	@ bug/future
+	return
+
+display_Volts_per_division_for_trace_2:
+	push	r0-r12	@ bug/future
+	ldr	r0, =fixed_point_Volts_per_division_for_trace_2
+	ldr	r1, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	ldr	r0, =color_for_trace_2_info
+	ldr	r1, =color_for_the_current_trace_info
+	ldr	r0, [r0]
+	str	r0, [r1]
+	ldr	r0, =position_of_center_of_first_character_y_of_info_1_for_trace_2
+	ldr	r1, =position_of_center_of_current_character_y
+	strb	r0, [r1]
+	ldr	r0, =position_of_center_of_first_character_x_of_info_1_for_trace_2
+	ldr	r1, =position_of_center_of_current_character_x
+	strb	r0, [r1]
+	call	display_Volts_per_division
+	pop	r0-r12	@ bug/future
+	return
+
+display_Volts_per_division:
+	push	r0-r12	@ bug/future
+	ldr	r0, =color_for_the_current_trace_info
+	ldr	r0, [r0]
+	ldr	r1, =font_color
+	str	r0, [r1]
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	cmp	r0, #1<<fixed_point_shift_by
+	bHS	display_Volts_per_division_one_or_greater
+display_Volts_per_division_less_than_one:
+	ldr	r1, =Volts_1
+	ldr	r2, =fixed_point__zero_point_000100
+	cmp	r0, r2
+	ldrHS	r1, =microVolts_100
+	ldr	r2, =fixed_point__zero_point_000200
+	cmp	r0, r2
+	ldrHS	r1, =microVolts_200
+	ldr	r2, =fixed_point__zero_point_000500
+	cmp	r0, r2
+	ldrHS	r1, =microVolts_500
+	ldr	r2, =fixed_point__zero_point_001000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_001
+	ldr	r2, =fixed_point__zero_point_002000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_002
+	ldr	r2, =fixed_point__zero_point_005000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_005
+	ldr	r2, =fixed_point__zero_point_010000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_010
+	ldr	r2, =fixed_point__zero_point_020000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_020
+	ldr	r2, =fixed_point__zero_point_050000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_050
+	ldr	r2, =fixed_point__zero_point_100000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_100
+	ldr	r2, =fixed_point__zero_point_200000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_200
+	ldr	r2, =fixed_point__zero_point_500000
+	cmp	r0, r2
+	ldrHS	r1, =milliVolts_500
+	b	display_Volts_per_division_done
+display_Volts_per_division_one_or_greater:
+	mov	r0, r0, lsr #fixed_point_shift_by
+	ldr	r1, =Volts_1
+	cmp	r0, #2
+	ldrHS	r1, =Volts_2
+	cmp	r0, #4
+	ldrHS	r1, =Volts_4
+	cmp	r0, #8
+	ldrHS	r1, =Volts_8
+	cmp	r0, #16
+	ldrHS	r1, =Volts_16
+	cmp	r0, #32
+	ldrHS	r1, =Volts_32
+display_Volts_per_division_done:
+	ldr	r0, =address_of_current_character_in_string
+	str	r1, [r0]
+	call	display_a_string
+	pop	r0-r12	@ bug/future
+	return
+
+draw_trace_1:
+	push	r0-r2
+@		ldr	r0, =0x27272727
+@		debug	r0
+	ldr	r0, =color_for_the_current_trace_normal
+	ldr	r1, =color_for_channel_a_normal
+	ldr	r1, [r1]	
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_info
+	ldr	r1, =color_for_channel_a_info
+	ldr	r1, [r1]
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_clipped
+	ldr	r1, =default_color_for_the_current_trace_clipped
+	str	r1, [r0]
+	ldr	r0, =vertical_scale_for_trace_1
+	ldr	r1, =vertical_scale_for_the_current_trace
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r0, =vertical_offset_in_pixels_for_trace_1
+	ldr	r1, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+@	ldr	r1, =old_fixed_point_Volts_per_division_for_trace_1
+@	ldr	r0, =fixed_point_Volts_per_division_for_trace_1
+@	ldr	r0, [r0]
+@		ldr	r0, =4<<fixed_point_shift_by
+@	str	r0, [r1]
+	call	determine_drawing_parameters_for_the_current_trace
+	ldr	r1, =fixed_point_Volts_per_division_for_trace_1
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	call	actually_draw_trace_1
+	ldr	r1, =old_vertical_scale_for_trace_1
+	ldr	r0, =vertical_scale_for_the_current_trace
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r1, =old_vertical_offset_in_pixels_for_trace_1
+	ldr	r0, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	call	display_Volts_per_division_for_trace_1
+	pop	r0-r2
+	return
+
+.pool
+
+erase_trace_1:
+	push	r0-r2
+@		ldr	r0, =0x27272727
+@		debug	r0
+	ldr	r0, =color_for_the_current_trace_normal
+	ldr	r1, =background_color
+	ldr	r1, [r1]	
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_info
+	ldr	r1, =background_color
+	ldr	r1, [r1]
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_clipped
+	ldr	r1, =horizontal_grid_lines_color
+	str	r1, [r0]
+	ldr	r0, =old_vertical_scale_for_trace_1
+@		ldr	r0, =vertical_scale_for_trace_1
+	ldrb	r0, [r0]
+	ldr	r1, =vertical_scale_for_the_current_trace
+	strb	r0, [r1]
+	ldr	r0, =old_vertical_offset_in_pixels_for_trace_1
+	ldr	r0, [r0]
+	ldr	r1, =vertical_offset_in_pixels_for_the_current_trace
+	str	r0, [r1]
+	call	determine_drawing_parameters_for_the_current_trace
+@	ldr	r0, =old_fixed_point_Volts_per_division_for_trace_1
+@	ldr	r1, =fixed_point_Volts_per_division_for_the_current_trace
+@	ldr	r0, [r0]
+@	str	r0, [r1]
+	call	actually_draw_trace_1
+	pop	r0-r2
+	return
+
+actually_draw_trace_1:
+	push	r0-r2
+	ldr	r0, =beginning_of_data_for_the_current_trace
+	ldr	r1, =beginning_of_trace_1
+	str	r1, [r0]
+@		ldr	r0, =vertical_offset_in_Volts_for_the_current_trace
+@		ldr	r0, =vertical_offset_in_fixed_point_divisions_for_the_current_trace
+@		ldr	r0, =log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace
+@		ldr	r0, =fixed_point__inverse_of_zero_point_020000000
+@		ldr	r2, =vertical_scale_for_trace_1
+@		ldrb	r1, [r2]
+@		debug	r1
+@	keep_it_between_signed_ping_pong	min=vertical_scale_minimum, it=r1, max=vertical_scale_maximum
+@		debug	r1
+@		str	r1, [r0]
+@	str	r1, [r2]
+	ldr	r0, =single_character_label_for_trace_1
+	ldrb	r0, [r0]
+	ldr	r1, =single_character_label_for_current_trace
+	strb	r0, [r1]
+	call	display_a_trace
+	ldr	r0, =pixel_position_y_of_0V_level_of_trace
+	ldrb	r0, [r0]
+	ldr	r1, =pixel_position_y_of_0V_level_of_trace_1
+	strb	r0, [r1]
+	pop	r0-r2
+	return
+
+draw_trace_2:
+	push	r0-r2
+@		ldr	r0, =0x27272727
+@		debug	r0
+	ldr	r0, =color_for_the_current_trace_normal
+	ldr	r1, =color_for_trace_2_normal
+	ldr	r1, [r1]	
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_info
+	ldr	r1, =color_for_trace_2_info
+	ldr	r1, [r1]
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_clipped
+	ldr	r1, =default_color_for_the_current_trace_clipped
+	str	r1, [r0]
+	ldr	r0, =vertical_scale_for_trace_2
+	ldr	r1, =vertical_scale_for_the_current_trace
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r0, =vertical_offset_in_pixels_for_trace_2
+	ldr	r1, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+@	ldr	r1, =old_fixed_point_Volts_per_division_for_trace_2
+@	ldr	r0, =fixed_point_Volts_per_division_for_trace_2
+@	ldr	r0, [r0]
+@		ldr	r0, =4<<fixed_point_shift_by
+@	str	r0, [r1]
+	call	determine_drawing_parameters_for_the_current_trace
+	ldr	r1, =fixed_point_Volts_per_division_for_trace_2
+	ldr	r0, =fixed_point_Volts_per_division_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	call	actually_draw_trace_2
+	ldr	r1, =old_vertical_scale_for_trace_2
+	ldr	r0, =vertical_scale_for_the_current_trace
+	ldrb	r0, [r0]
+	strb	r0, [r1]
+	ldr	r1, =old_vertical_offset_in_pixels_for_trace_2
+	ldr	r0, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r0, [r0]
+	str	r0, [r1]
+	call	display_Volts_per_division_for_trace_2
+	pop	r0-r2
+	return
+
+erase_trace_2:
+	push	r0-r2
+@		ldr	r0, =0x27272727
+@		debug	r0
+	ldr	r0, =color_for_the_current_trace_normal
+	ldr	r1, =background_color
+	ldr	r1, [r1]	
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_info
+	ldr	r1, =background_color
+	ldr	r1, [r1]
+	str	r1, [r0]
+	ldr	r0, =color_for_the_current_trace_clipped
+	ldr	r1, =horizontal_grid_lines_color
+	str	r1, [r0]
+	ldr	r0, =old_vertical_scale_for_trace_2
+@		ldr	r0, =vertical_scale_for_trace_2
+	ldrb	r0, [r0]
+	ldr	r1, =vertical_scale_for_the_current_trace
+	strb	r0, [r1]
+	ldr	r0, =old_vertical_offset_in_pixels_for_trace_2
+	ldr	r0, [r0]
+	ldr	r1, =vertical_offset_in_pixels_for_the_current_trace
+	str	r0, [r1]
+	call	determine_drawing_parameters_for_the_current_trace
+@	ldr	r0, =old_fixed_point_Volts_per_division_for_trace_2
+@	ldr	r1, =fixed_point_Volts_per_division_for_the_current_trace
+@	ldr	r0, [r0]
+@	str	r0, [r1]
+	call	actually_draw_trace_2
+	pop	r0-r2
+	return
+
+.pool
+
+actually_draw_trace_2:
+	push	r0-r2
+	ldr	r0, =beginning_of_data_for_the_current_trace
+	ldr	r1, =beginning_of_trace_2
+	str	r1, [r0]
+@		ldr	r0, =vertical_offset_in_Volts_for_the_current_trace
+@		ldr	r0, =vertical_offset_in_fixed_point_divisions_for_the_current_trace
+@		ldr	r0, =log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace
+@		ldr	r0, =fixed_point__inverse_of_zero_point_020000000
+@		ldr	r2, =vertical_scale_for_trace_2
+@		ldrb	r1, [r2]
+@		debug	r1
+@	keep_it_between_signed_ping_pong	min=vertical_scale_minimum, it=r1, max=vertical_scale_maximum
+@		debug	r1
+@		str	r1, [r0]
+@	str	r1, [r2]
+	ldr	r0, =single_character_label_for_trace_2
+	ldrb	r0, [r0]
+	ldr	r1, =single_character_label_for_current_trace
+	strb	r0, [r1]
+	call	display_a_trace
+	ldr	r0, =pixel_position_y_of_0V_level_of_trace
+	ldrb	r0, [r0]
+	ldr	r1, =pixel_position_y_of_0V_level_of_trace_2
+	strb	r0, [r1]
+	pop	r0-r2
+	return
+
+display_a_trace:
+	@ takes an array of fixed-point data (in units of volts), offsets and scales it vertically
+	@ and draws it on the screen in the trace drawing area
+	@ the color displayed can change based on whether it's clipped by the viewport
+	push	r0-r12
+@		ldr	r0, =0x12121212
+@		debug	r0
+	ldr	r0, =trace_drawing_area_first_x
+	ldr	r2, =beginning_of_data_for_the_current_trace
+	ldr	r2, [r2]
+	ldr	r3, =log_base_2_of_the_vertical_scale_in_Volts_per_division_for_the_current_trace		@ for Volts/div >= 1
+	ldr	r3, [r3]
+	ldr	r10, =inverse_of_the_vertical_scale_in_divisions_per_Volt_for_the_current_trace	@ for Volts/div <  1
+	ldr	r10, [r10]
+	ldr	r4, =vertical_offset_in_pixels_for_the_current_trace
+	ldr	r4, [r4]
+	ldr	r5, =number_of_pixels_per_vertical_division
+	ldr	r8, =pixel_position_y_of_0V_level_of_trace
+	@ r0 = current x pixel position (independent variable / counter)
+	@ r1 = current y pixel position (calculated)
+	@ r2 = address of current datapoint in array
+	@ r3 = log base 2 of the vertical scale (for division) or zero
+	@ r4 = vertical offset (for addition)
+	@ r5 = number of pixels per vertical division
+	@ r6 = temporary
+	@ r7 = color register / temporary
+	@ r8 = destination for 0V y position of trace
+	@ r9 = temporary
+				@ take the vertical offset (n Volts)
+display_a_trace_next:
+	ldr	r1, [r2], #4	@ get the data (in fixed-point Volts) from the array and increment the array address
+	@ only one of the following two is actually effective, depending on whether the scale is >=1V/div or not:
+	mov	r1, r1, asr r3	@ divide it by the vertical scale (in Volts/division) (to get a result in fixed-point divisions)
+@	smull	r1, r6, r10, r1	@ multiply by the inverse of the vertical scale in divisions/Volt (result in fixed-point divisions) - this can easily overflow for a large input signal and a small vertical V/div, so we go 64 bit
+	mul	r1, r10, r1	@ multiply by the inverse of the vertical scale in divisions/Volt (result in fixed-point divisions)
+	mov	r6, r1, asr #fixed_point_shift_by	@ save the number of vertical divisions for later
+@	smull	r1, r6, r5, r1	@ multiply it by the number of pixels per vertical division (result in fixed-point pixels)
+	mul	r1, r5, r1	@ multiply it by the number of pixels per vertical division (result in fixed-point pixels)
+	mov	r1, r1, asr #fixed_point_shift_by	@ convert it to an a non-fixed point integer (result in pixels)
+	add	r1, r1, r4	@ add the vertical offset (in pixels) to it
+	rsb	r1, r1, #trace_drawing_area_center_y	@ subtract it from the number of pixels so it'll normally start in the vertical center of the trace area
+	cmp	r6, # number_of_vertical_divisions*number_of_screens_past_which_the_value_is_considered_an_overflow
+	ldrGT	r1, =trace_drawing_area_first_y - 1
+	cmp	r6, #-number_of_vertical_divisions*number_of_screens_past_which_the_value_is_considered_an_overflow
+	ldrLT	r1, =trace_drawing_area_last_y  + 1
+.ifdef	asdfdf
+		cmp	r0, #3*(trace_drawing_area_last_x-trace_drawing_area_first_x)/4
+		bNE	display_a_trace_next_1
+		push	r0-r1
+		ldr	r0, =debug_stack_pointer
+		ldr	r1, =beginning_of_debug_stack
+		str	r1, [r0]
+@			ldr	r0, =0x99990000
+@			debug	r0
+		pop	r0-r1
+.endif
+display_a_trace_next_1:
+	cmp	r0, #trace_drawing_area_first_x
+	bNE	display_a_trace_next_2
+	@ draw a single-character label to the left of where 0V would be for the trace
+	push	r1
+	ldr	r1, =0		@ start with zero fixed-point Volts
+	mul	r1, r5, r1	@ multiply it by the number of pixels per vertical division (result in fixed-point pixels)
+	mov	r1, r1, asr #fixed_point_shift_by	@ convert it to an a non-fixed point integer (result in pixels)
+	add	r1, r1, r4	@ add the vertical offset (in pixels) to it
+	rsb	r1, r1, #trace_drawing_area_center_y	@ subtract it from the number of pixels so it'll normally start in the vertical center of the trace area
+	cmp	r1, #trace_drawing_area_first_y
+	ldrLT	r1, =trace_drawing_area_first_y
+	cmp	r1, #trace_drawing_area_last_y
+	ldrGT	r1, =trace_drawing_area_last_y
+	strb	r1, [r8]
+	ldr	r7, =position_of_center_of_current_character_y
+	strb	r1, [r7]
+	ldr	r9, =position_x_of_single_character_trace_label
+	ldr	r7, =position_of_center_of_current_character_x
+	strb	r9, [r7]
+	ldr	r7, =single_character_label_for_current_trace
+	ldrb	r7, [r7]
+	ldr	r9, =current_character
+	strb	r7, [r9]
+	ldr	r9, =font_color
+	ldr	r7, =color_for_the_current_trace_info
+	ldr	r7, [r7]
+	str	r7, [r9]
+	call	draw_a_character
+	pop	r1
+display_a_trace_next_2:
+	@ make sure if it was supposed to be drawn off the trace area, it gets colored differently and draws it at the border
+	.ifc	asdf,fdsa
+		ldr	r7, =color_for_the_current_trace_normal
+		cmp	r1, #trace_drawing_area_first_y
+		ldrLT	r1, =trace_drawing_area_first_y
+		ldrLT	r7, =color_for_the_current_trace_clipped
+		cmp	r1, #trace_drawing_area_last_y
+		ldrGT	r1, =trace_drawing_area_last_y
+		ldrGT	r7, =color_for_the_current_trace_clipped
+		ldr	r7, [r7]
+		@ draw a single y-value for this x-value
+		display_set_color_of_single_pixel	x_coordinate_register=r0, y_coordinate_register=r1, color_register=r7, saveregs=yes
+	.else
+		cmp	r0, #trace_drawing_area_first_x
+		bEQ	display_a_trace_next_first_x
+		mov	r12, r1
+		ldr	r7, =color_for_the_current_trace_normal
+		cmp	r1, #trace_drawing_area_first_y
+		ldrLT	r1, =trace_drawing_area_first_y
+		cmp	r1, #trace_drawing_area_last_y
+		ldrGT	r1, =trace_drawing_area_last_y
+display_a_trace_next_3:
+		ldr	r7, [r7]
+		@ draw a line between the previous y value and the current one at this x-value
+		subS	r6, r1, r11
+		rsbMI	r6, #0
+		@ making the following net shift 3 or more leaves drawing artifacts on the
+		@ screen because the display controller isn't done drawing by the time
+		@ the next drawing command is given
+		@ bug/future:  this will probably have to be changed if this is ever
+		@ run at full speed from ram
+		@ lsl #5, then lsr #3 produces artifacts
+		@ lsl #4, then lsr #2 produces artifacts
+		@ lsl #3, then lsr #1 produces artifacts
+@		mov	r6, r6, lsr #3
+@		mov	r6, r6, lsl #1
+		@ if less than or equal to (first number), make it 0
+		@ if greater than or equal to (second number), double it
+		@ 16, 64 works
+		@ 32, 64 works
+		@ 32, 80 works
+		@ 50, 95 has artifacts
+		@ 50, 80 has artifacts
+		@ if less than or equal to (first number), make it 0
+		@ if greater than or equal to (second number), add (third number)
+		@ 32, 80, 35 works
+		cmp	r6, #32
+		ldrLS	r6, =0
+		cmp	r6, #80
+@		movHS	r6, r6, lsl #1
+		addHS	r6, r6, #35
+		mov	r6, r6, lsr #2
+		@
+		cmp	r1, r11
+		bGT	display_a_trace_next_4
+		draw_line	top_register=r1, bottom_register=r11, left_register=r0, right_register=r0, color_register=r7, saveregs=yes
+		delay_reg	register=r6, saveregs=yes
+		b	display_a_trace_next_6
+display_a_trace_next_4:
+		draw_line	top_register=r11, bottom_register=r1, left_register=r0, right_register=r0, color_register=r7, saveregs=yes
+		delay_reg	register=r6, saveregs=yes
+display_a_trace_next_6:
+		mov	r1, r12
+		cmp	r1, #trace_drawing_area_first_y
+		bLT	display_a_trace_next_single_pixel_at_top_or_bottom
+		cmp	r1, #trace_drawing_area_last_y
+		bGT display_a_trace_next_single_pixel_at_top_or_bottom
+		b	display_a_trace_next_7
+display_a_trace_next_first_x:
+display_a_trace_next_single_pixel_at_top_or_bottom:
+		ldr	r7, =color_for_the_current_trace_normal
+		cmp	r1, #trace_drawing_area_first_y
+		ldrLT	r1, =trace_drawing_area_first_y
+		ldrLT	r7, =color_for_the_current_trace_clipped
+		cmp	r1, #trace_drawing_area_last_y
+		ldrGT	r1, =trace_drawing_area_last_y
+		ldrGT	r7, =color_for_the_current_trace_clipped
+		ldr	r7, [r7]
+		display_set_color_of_single_pixel	x_coordinate_register=r0, y_coordinate_register=r1, color_register=r7, saveregs=yes
+display_a_trace_next_7:
+	.endif
+	mov	r11, r1 @ save y coordinate of previous value
+	inc	r0
+	cmp	r0, #trace_drawing_area_last_x
+	ble	display_a_trace_next
+@		ldr	r0, =0x12345678
+@		debug	r0
+	pop	r0-r12
+	return
+
+.pool
+
+draw_a_grid:
+	push	r0-r12	@ bug/future: this could be more efficient; have to check the macros below
+	@ horizontal lines:
+	ldr	r0, =trace_drawing_area_first_x
+	ldr	r1, =trace_drawing_area_last_x
+	ldr	r2, =trace_drawing_area_first_y
+	ldr	r4, =horizontal_grid_lines_color
+	ldr	r3, =number_of_horizontal_grid_lines
+draw_a_grid_horizontal_next:
+	draw_line       left_register=r0, right_register=r1, top_register=r2, bottom_register=r2, color_register=r4, saveregs=yes
+	delay_imm	count=55, saveregs=yes
+	add	r2, r2, #spacing_between_horizontal_grid_lines
+	dec	r3
+	bne	draw_a_grid_horizontal_next
+	draw_line       left_register=r0, right_register=r1, top_register=r2, bottom_register=r2, color_register=r4, saveregs=yes
+	delay_imm	count=55, saveregs=yes
+	@ vertical lines:
+	ldr	r0, =trace_drawing_area_first_x
+	ldr	r2, =trace_drawing_area_first_y
+	ldr	r3, =trace_drawing_area_last_y
+	ldr	r4, =vertical_grid_lines_color
+	ldr	r1, =number_of_vertical_grid_lines
+draw_a_grid_vertical_next:
+	draw_line       left_register=r0, right_register=r0, top_register=r2, bottom_register=r3, color_register=r4, saveregs=yes
+	delay_imm	count=55, saveregs=yes
+	add	r0, r0, #spacing_between_vertical_grid_lines
+	dec	r1
+	bne	draw_a_grid_vertical_next
+	draw_line       left_register=r0, right_register=r0, top_register=r2, bottom_register=r3, color_register=r4, saveregs=yes
+	delay_imm	count=55, saveregs=yes
+	pop	r0-r12	@ bug/future: this could be more efficient; have to check the macros below
+	return
+
+.ifc	sdf,elbk
+erase_and_redraw_a_trace_one_pixel_at_a_time__each_pixel_only_erased_and_redrawn_if_necessary:
+	.warning "this function is not finished"
+	@ blah...
+	return
+.endif
+

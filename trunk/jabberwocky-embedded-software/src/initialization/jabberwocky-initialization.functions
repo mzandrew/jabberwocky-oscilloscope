@@ -1,0 +1,135 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+initialize_arm7_for_oscilloscope_and_initialize_oscilloscope:
+	push	r0-r12	@ bug/future
+	call	set_trigger_a_to_zero_volts
+	call	trigger_clear
+	.ifdef trigger_delay_available
+		call	disable_the_clock_on_the_first_trigger_delay_timer_channel
+		call	disable_the_clock_on_the_second_trigger_delay_timer_channel
+	.endif
+	call	setup_timer_counter_channel_clock_sources
+	call	setup_timer_counter_channel_for_measuring_frequency_of_RCO
+	.ifdef trigger_delay_available
+		call	setup_first_timer_counter_channel_to_handle_trigger_delay
+		call	setup_second_timer_counter_channel_to_handle_trigger_delay
+		call	set_trigger_channel_and_enable_triggering_on_the_rising_edge_of_the_output_of_the_corresponding_d_flip_flop
+		call	determine_number_of_nanoseconds_in_a_trigger_delay_counter_period
+		call	determine_number_of_trigger_delay_counter_periods_in_a_second
+		call	calculate_the_number_of_nanoseconds_the_whole_buffer_would_take_to_sample
+		call	determine_trigger_delay
+		call	set_trigger_delay_from_determined_values_for_first_part_of_the_trigger_delay
+		call	set_trigger_delay_from_determined_values_for_second_part_of_the_trigger_delay
+	.endif
+	call	setup_labrador3_input_output_lines
+	call	setup_lab3_data_bus
+	call	setup_lab3_address_bus
+	call	setup_lab3_channel_address_bus
+@	call	display_Volts_per_division
+@	call	draw_a_grid
+@	call	display_a_friendly_message
+@	call	display_Volts_per_division_for_trace_1
+@	call	draw_trace_1
+	.ifne	sine_and_cosine_lookup_table_available
+@@		call	make_a_multifrequency_trace_1
+		call	make_a_multifrequency_trace_2
+	.endif
+	.ifdef trigger_delay_available
+		call	enable_the_clock_of_the_first_part_of_the_trigger_delay
+		call	enable_the_clock_of_the_second_part_of_the_trigger_delay
+	.endif
+	.ifdef	onboard_oscilloscope_available
+		call	initialize_arm7_for_onboard_oscilloscope_functionality
+	.endif
+		ldr	r0, ='A
+		ldr	r1, =single_character_label_for_trace_1
+		strb	r0, [r1]
+		ldr	r0, ='B
+		ldr	r1, =single_character_label_for_trace_2
+		strb	r0, [r1]
+	call	setup_programmable_clock_output_for_CAL__from_slow_clock
+@	call	setup_programmable_clock_output_for_CAL__from_PLL_clock
+@	call	setup_programmable_clock_output_for_CAL__from_main_clock
+	call	calculate_stuff_based_on_new_horizontal_scale_setting
+	call	draw_a_grid
+	call	display_rotary_encoder_a_oscilloscope_mode_info
+	call	display_rotary_encoder_b_oscilloscope_mode_info
+@		call	setup_for_next_trigger
+	pop	r0-r12	@ bug/future
+	return
+
+debug_TC0:
+	push	r0-r12	@ bug/future
+		ldr	r0, =0x48484848
+		debug	r0
+		ldr	r0, =TC0
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r1, [r0], #4
+		debug	r1
+		ldr	r0, =0x69696969
+		debug	r0
+	pop	r0-r12	@ bug/future
+	return
+
+debug_PIOB:
+	push	r0-r12	@ bug/future
+		ldr	r0, =PIOB+0x8
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x18
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x28
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x38
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x48
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x58
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x68
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0x78
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =PIOB+0xa8
+		ldr	r1, [r0]
+		and	r1, #bit00<<10
+		debug	r1
+		ldr	r0, =0x12121212
+		debug	r0
+	pop	r0-r12	@ bug/future
+	return
+
+@ ============================================================================
+

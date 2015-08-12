@@ -1,0 +1,14 @@
+.data	@ non-zero initialized ram variables (gets stored in flash; must be copied to ram)
+
+.ifne	need_sine_and_cosine_lookup_table
+one_over_n_fp_lookup_table:
+@ these are the 16-bit mantissa fixed-point values for 1/n for n=1 to n=24
+@one_over_n_fp_lookup_table_16:
+	.hword 0, 32768, 21845, 16384
+	.hword 13107, 10923, 9362, 8192
+	.hword 7282, 6554, 5958, 5461
+	.hword 5041, 4681, 4369, 4096
+	.hword 3855, 3641, 3449, 3277
+	.hword 3121, 2979, 2849, 2731
+.endif
+

@@ -1,0 +1,331 @@
+.pool
+.text @ where actual code belongs
+.align 2
+
+@ ============================================================================
+
+.global main_loop
+main_loop:
+@	pulse_general_purpose_output	output=a
+	call	get_raw_status_of_all_buttons_and_rotary_encoders
+	call	check_status_of_all_buttons_and_rotary_encoders
+	call	predicate_appropriate_button_and_rotary_encoder_changes
+	.ifeq	model-prototypeoscilloscope
+		call	service_button_c
+	.endif
+	ldr	r0, =PIT
+	ldr	r1, =bit00
+	ldr	r2, [r0, #Periodic_Interval_Timer_Status_Register_offset]
+@	ldr	r3, =PIOA
+@	mov	r4, r1, lsl #general_purpose_output_a
+@	mov	r5, r1, lsl #general_purpose_output_b
+@	str	r5, [r3, #Clear_Output_Data_Register_offset]
+@	str	r5, [r3, #Set_Output_Data_Register_offset]
+	tst	r2, r1
+	bEQ	main_loop	@ has it been at least a millisecond yet?
+	call	once_a_millisecond
+	b	main_loop
+
+@ ============================================================================
+
+find_how_many_millisecond_periods_we_missed:
+	push	r0-r12 @ bug/future
+	@ read how many millisecond periods we missed while doing other things
+	@ and optionally output a pulse for each one
+	ldr	r0, =PIT
+	ldr	r1, [r0, #Periodic_Interval_Timer_Value_Register_offset]
+	mov	r2, r1, lsr #20
+	ldr	r0, =how_many_millisecond_periods_we_missed
+	str	r2, [r0]
+@		debug	r2
+	pop	r0-r12 @ bug/future
+	return
+
+once_a_millisecond:
+	push	r0-r12
+	call	find_how_many_millisecond_periods_we_missed
+	ldr	r0, =how_many_millisecond_periods_we_missed
+@	ldr	r2, [r0]
+@@	adc_start_conversion	channel=4
+	ldr	r3, =this_is_the_first_time_through_the_main_loop
+	ldrb	r1, [r3]
+	cmp	r1, #0
+	bEQ	not_necessarily_the_first_time_through_the_main_loop
+first_time_through_the_main_loop:
+	ldr	r2, =0
+	str	r2, [r0]
+	strb	r2, [r3] @ cherry popped
+not_necessarily_the_first_time_through_the_main_loop:
+	call	update_secondary_counters_from_millisecond_timer_counter
+@	call	toggle_general_purpose_output_a
+	call	decrement_debounce_counters
+	pop	r0-r12
+	return
+
+update_secondary_counters_from_millisecond_timer_counter:
+	push	r0-r12
+	ldr	r12, =how_many_millisecond_periods_we_missed
+	ldr	r12, [r12]
+	@ update secondary counters from millisecond timer/counter:
+	ldr	r0, =one_hundred_times_per_second_timer_counter__derived_from_millisecond_timer
+	ldr	r2, =ten_times_per_second_timer_counter__derived_from_millisecond_timer
+	ldr	r4, =once_per_second_timer_counter__derived_from_millisecond_timer
+	ldr	r6, =two_hundred_times_per_second_timer_counter__derived_from_millisecond_timer
+	ldr	r8, =n_times_per_second_timer_counter__derived_from_millisecond_timer
+	ldr	r1, [r0]
+	ldr	r3, [r2]
+	ldr	r5, [r4]
+	ldr	r7, [r6]
+	ldr	r9, [r8]
+	add	r1, r1, r12
+	add	r3, r3, r12
+	add	r5, r5, r12
+	add	r7, r7, r12
+	add	r9, r9, r12
+	str	r1, [r0]
+	str	r3, [r2]
+	str	r5, [r4]
+	str	r7, [r6]
+	str	r9, [r8]
+	@ r1 = one_hundred_times_per_second counter (range=[0,10])
+	@ r3 = ten_times_per_second counter (range=[0,100])
+	@ r5 = once_per_second counter (range=[0,1000])
+	@ r7 = two_hundred_times_per_second counter (range=[0,5])
+	@ r9 = n times per second counter (range=[0,m])
+	@
+	ldr	r11, =number_of_milliseconds_in_a_RCO_timing_period
+	ldr	r11, [r11]
+	subS	r9, r9, r11
+	bLO	not_yet_reached_m_milliseconds
+reached_m_milliseconds:
+	str	r9, [r8]
+	call	n_times_per_second
+not_yet_reached_m_milliseconds:
+	@
+	subS	r7, r7, #5
+	bLO	not_yet_reached_one_two_hundredth_of_one_second
+reached_one_two_hundredth_of_one_second:
+	str	r7, [r6]
+	call	two_hundred_times_a_second
+not_yet_reached_one_two_hundredth_of_one_second:
+	@
+	ldr	r0, =measuring_frequency_of_RCO
+	ldrb	r1, [r0]
+	cmp	r1, #0
+	bNE	measuring_frequency_of_RCO_so_do_not_do_anything_else
+	@
+	ldr	r0, =acquiring_dac_a_to_labrador3_frequency_table
+	ldrb	r1, [r0]
+	cmp	r1, #0
+	bNE	acquiring_dac_a_to_labrador3_frequency_table_so_do_not_do_anything_else
+	@
+	subS	r1, r1, #10
+	bLO	not_yet_reached_one_hundredth_of_one_second
+reached_one_hundredth_of_one_second:
+	str	r1, [r0]
+	call	one_hundred_times_a_second
+not_yet_reached_one_hundredth_of_one_second:
+	@
+	subS	r3, r3, #100
+	bLO	not_yet_reached_one_tenth_of_one_second
+reached_one_tenth_of_one_second:
+	str	r3, [r2]
+	call	ten_times_a_second
+not_yet_reached_one_tenth_of_one_second:
+	@
+	subS	r5, r5, #1000
+	bLO	not_yet_reached_one_second
+reached_one_second:
+	str	r5, [r4]
+	call	once_per_second
+not_yet_reached_one_second:
+	@
+	.ifeq	function-oscilloscope
+		call	oscilloscope_once_a_millisecond
+	.endif
+	.ifeq	function-clock
+		call	draw_clock_face_if_necessary
+	.endif
+acquiring_dac_a_to_labrador3_frequency_table_so_do_not_do_anything_else:
+	call	set_next_frequency_for_dac_a_to_labrador3_frequency_table_if_desired
+measuring_frequency_of_RCO_so_do_not_do_anything_else:
+@	ldr	r3, =PIOA
+@	ldr	r1, =bit00
+@	mov	r4, r1, lsl #general_purpose_output_a
+m1:
+@	str	r4, [r3, #Clear_Output_Data_Register_offset]
+@	str	r4, [r3, #Set_Output_Data_Register_offset]
+	dec	r12
+	bHI	m1
+	pop	r0-r12
+	return
+
+@ ============================================================================
+
+n_times_per_second:
+	@ called once every m milliseconds
+	push	r0-r12
+	call	measure_frequency_of_RCO_if_desired
+	pop	r0-r12
+	return
+
+two_hundred_times_a_second:
+	push	r0-r12
+@ bug/future:  the reason the measurement is not stable is because this is not actually called exactly once per 10ms (at least not without some phase relative to the last one)
+@.set	number_of_RCO_timing_periods_in_one_second, 200
+	@ bug/future:  putting this at 100Hz doesn't quite let it get up to 3.7GHz:
+@	call	measure_frequency_of_RCO_if_desired
+	pop	r0-r12
+	return
+
+one_hundred_times_a_second:
+	push	r0-r12
+@	call	increment_dac_b
+@	call	decrement_dac_d
+@	call	update_dac_a_from_buffered_value
+@	call	update_dac_b_from_buffered_value
+@	call	update_dac_c_from_buffered_value
+@	call	update_dac_d_from_buffered_value
+	pop	r0-r12
+	return
+
+ten_times_a_second:
+	push	r0-r12
+@		ldr	r0, =frequency_of_LAB3
+@		ldr	r0, [r0]
+@		debug_if_changed	r0
+	call	adjust_dacs_a_and_c_to_get_labrador3_sampling_rate_closer_to_desired_frequency
+	call	setup_to_measure_frequency_of_RCO
+@	call	decrement_trigger_a_level
+	pop	r0-r12
+	return
+
+once_per_second:
+	push	r0-r12
+	@
+@	call	display_labrador3_frequency
+@	call	display_human_readable_labrador3_frequency
+@	call	display_average_labrador3_frequency
+@	call	display_human_readable_average_labrador3_frequency
+	@
+@	call	setup_for_dac_a_to_labrador3_frequency_table
+@	call	fill_dac_a_to_labrador3_frequency_table_logarithmically
+@	call	fill_dac_a_to_labrador3_frequency_table_linearly
+@		ldr	r0, =TWI
+@		ldr	r1, [r0, #TWI_Status_Register_offset]
+@		ldr	r0, =fixed_point_temporary_value
+@		str	r1, [r0]
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=fixed_point_temporary_value, address_of_new_value=fixed_point_temporary_value, x_position=15, y_position=42, type_of_value=word, color=blue
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=TWI+TWI_Status_Register_offset, address_of_new_value=TWI+TWI_Status_Register_offset, x_position=15, y_position=42, type_of_value=word, color=blue
+@		erase_old_and_redraw_new_hexadecimal_integer	address_of_old_value=timer_counter_channel_for_measuring_frequency_of_RCO+TC_Channel_Status_Register_offset, address_of_new_value=timer_counter_channel_for_measuring_frequency_of_RCO+TC_Channel_Status_Register_offset, x_position=15, y_position=68, type_of_value=word, color=blue
+	@
+@	call	display_battery_voltage
+@	call	display_bus_voltage
+@	call	display_display_voltage
+@	call	display_vout_current
+@	call	display_3.3V_current
+@	call	display_2.5V_current
+@	call	display_display_current
+	@
+	call	increment_counter__seconds
+	ldr	r0, =counter__seconds
+	ldr	r1, [r0]
+	tst	r1, #bit00
+	bNE	even_second
+odd_second:
+	call	odd_seconds
+	b	even_odd_seconds_done
+even_second:
+	call	even_seconds
+even_odd_seconds_done:
+	@
+	ldr	r0, =counter__seconds
+	ldr	r1, [r0]
+	and	r1, r1, #0b11
+	cmp	r1, #0b00
+	bEQ	first_second
+	cmp	r1, #0b01
+	bEQ	second_second
+	cmp	r1, #0b10
+	bEQ	third_second
+	cmp	r1, #0b11
+	bEQ	forth_second
+first_second:
+@	call	select_channel_a_multiplexer_1
+	b	first_second_third_forth_seconds_done
+second_second:
+@	call	select_channel_a_multiplexer_2
+	b	first_second_third_forth_seconds_done
+third_second:
+@	call	select_channel_a_multiplexer_3
+	b	first_second_third_forth_seconds_done
+forth_second:
+@	call	select_channel_a_multiplexer_4
+first_second_third_forth_seconds_done:
+once_per_second_done:
+	pop	r0-r12
+	return
+
+increment_counter__seconds:
+	push	r0-r1
+	ldr	r0, =counter__seconds
+	ldr	r1, [r0]
+	inc	r1
+	str	r1, [r0]
+	pop	r0-r1
+	return
+
+odd_seconds:
+	push	r0-r12
+@	call	select_channel_a_multiplexer_4
+@	call	turn_off_Vdisplay
+	pop	r0-r12
+	return
+
+even_seconds:
+	push	r0-r12
+@	call	select_channel_a_multiplexer_3
+@	call	turn_on_Vdisplay
+	pop	r0-r12
+	return
+
+@ temporary:
+.set	TRIGGER_LEVEL__A_MINIMUM, 1600
+.set	TRIGGER_LEVEL__A_MAXIMUM, 2000
+
+decrement_trigger_a_level:
+	push	r0-r1
+	ldr	r1, =dac_b_buffered_value
+	ldr	r0, [r1]
+	inc	r0
+@	add	r0, r0, #40
+	keep_it_between_unsigned	min=TRIGGER_LEVEL__A_MINIMUM, it=r0, max=TRIGGER_LEVEL__A_MAXIMUM
+	str	r0, [r1]
+		erase_old_and_redraw_new_integer	address_of_old_value=dac_b_buffered_value, address_of_new_value=dac_b_buffered_value, x_position=58, y_position=42, type_of_value=word, color=red
+	call	update_dac_b_from_buffered_value
+	pop	r0-r1
+	return
+
+increment_dac_b:
+	push	r0-r1
+	ldr	r1, =dac_b_buffered_value
+	ldr	r0, [r1]
+@	inc	r0
+	add	r0, r0, #40
+	str	r0, [r1]
+	call	update_dac_b_from_buffered_value
+	pop	r0-r1
+	return
+
+decrement_dac_d:
+	push	r0-r1
+	ldr	r1, =dac_d_buffered_value
+	ldr	r0, [r1]
+	dec	r0
+	str	r0, [r1]
+	call	update_dac_d_from_buffered_value
+	pop	r0-r1
+	return
+
+@ ============================================================================
+
