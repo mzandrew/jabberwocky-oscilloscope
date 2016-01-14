@@ -1,0 +1,29 @@
+# introduction #
+
+This page describes the design decisions and specifications of some of the components used.
+
+# details #
+
+## analog front-end ##
+
+The main reason to have anything but a resistive divider on the front-end of the oscilloscope is that the lab3 can only digitize voltages between 0.5V and 2.0V. In the neutrino detector experiment, the input was ac coupled and then a 1.25V DC bias voltage was set up on the input to the lab3, so there was no problem. In a general-purpose oscilloscope, however, one frequently wants to see the DC offset of a given signal, so the choice was made to make the input DC-coupled and use a summing amplifier to add 1.25V to the (attenuated) signal. This severely constrains the analog bandwidth of the scope, as there are no very-high bandwidth multiplexers which work with positive AND negative voltage swings.
+
+In order to measure a greater dynamic range and allow the input voltages to swing negative, an operational amplifier is used in a summing configuration (to add a 1.25VDC offset) with an array of voltage-dividers and a multiplexer to choose the gain for the input signal. This allows a course adjustment so that “high” voltages (+-64V) can be digitized as well as “low” voltages (a few mV, just above the noise floor for the lab3) using just 12 bits of resolution.
+
+The input stage is high-impedance (4 sets of 4MOhm resistive dividers in parallel going into a 4to1 multiplexer) and has schottky protection diode pairs that limit the voltage going into the multiplexer to about +-(0.75V+the diode’s forward voltage), so a relatively high-voltage input should not destroy the device, since the current that develops through the high resistance is very small (~71uA for a 177V input signal across a 2.5MOhm resistor, the top of one of the resistive dividers). The IV curve for the schottkys that I picked doesn’t even show anything below 10,000uA and the forward voltage in that case is 0.24V, so the input to the multiplexer should never see more than +-1V.
+
+## microcontroller ##
+
+The microcontroller is an Atmel AT91SAM7A3 and runs up to 60MHz (although will probably be constrained to run at 48MHz so that the necessary clocks for the USB interface can be generated.
+
+## display ##
+
+The 128×124 pixel display is easily capable of showing two traces with 10 horizontal divisions and 8 vertical divisions along with ancillary information about each trace.
+
+## controls ##
+
+There are 2 rotary encoders and 4 general purpose buttons. The rotary encoders are to select the vertical and horizontal scales and offsets.
+
+## circuit board ##
+
+The board has 2 layers and is 99.5mm X 79.5mm. The trace width / trace spacing / hole diameter is 6/6/15 (in mils). There are 771 SMD pads on the top, 196 SMD pads on the bottom and 392 holes drilled, total and the board is ~12 square inches.
