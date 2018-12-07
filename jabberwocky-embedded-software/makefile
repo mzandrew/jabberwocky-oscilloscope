@@ -24,11 +24,11 @@ MAKEFLAGS = --no-print-directory --silent --keep-going
 # either do this:
 # export PATH="${PATH}:/usr/local/arm-elf/bin"
 # or prepend /usr/local/arm-elf/bin/ to the following:
-assembler  = $(nice) arm-elf-as
-c_compiler = $(nice) arm-elf-gcc
-elf_to_hex = $(nice) arm-elf-objcopy
-linker     = $(nice) arm-elf-ld
-prefix = /usr/local/arm-elf/arm-elf
+assembler  = $(nice) arm-none-eabi-as
+c_compiler = $(nice) arm-none-eabi-gcc
+elf_to_hex = $(nice) arm-none-eabi-objcopy
+linker     = $(nice) arm-none-eabi-ld
+#prefix = /usr/local/arm-elf/arm-elf
 
 #objects := $(patsubst %.c,%.o,$(wildcard *.c))
 # this list needs to have the assembly object with the interrupt vector table first
@@ -63,8 +63,12 @@ elf_to_hex_flags = --output-target=ihex
 
 list_of_assembly_language_files = $(list src/*.armasm) $(list src/*.s)
 list_of_c_language_files = $(list src/*.c)
+IF_INSTALLED := $(shell which arm-none-eabi-as 2>/dev/null 1>&2; echo "$$?")
 
 default :
+ifeq ($(IF_INSTALLED),1)
+	sudo apt -y install gcc-arm-none-eabi
+endif
 #	$(MAKE) -B all
 	$(MAKE) all
 #	$(MAKE) program
@@ -152,7 +156,7 @@ sajtag : ;
 	telnet localhost 4444
 
 nm : ;
-	arm-elf-nm work/jabberwocky.elf
+	arm-none-eabi-nm work/jabberwocky.elf
 
 edit : ;
 	gvim -S vim-session &

@@ -1,6 +1,22 @@
-apt-get install libgmp-dev
-apt-get install libmpfr-dev
-./configure --host=i686-pc-linux-gnu --program-prefix=arm-elf- --target=arm-elf --disable-threads --with-cpu=arm7tdmi --enable-languages=c
+2018-12-07 update
+just do this:
+sudo apt install gcc-arm-none-eabi
 
-gcc-4.3.3 complains that arm-elf/bin/as doesn't do -Qy
+
+#uncomment deb-src line for main repository in /etc/apt/sources.list
+sudo apt-get -y install libgmp-dev libmpfr-dev
+sudo apt-get -y install gnat-7
+sudo apt-get -y build-dep gcc-7
+sudo apt-get -y source gcc-7 --download-only
+#sudo chown $UID:$GID filename
+tar xzf gcc-7_7.3.0.orig.tar.gz
+tar xJf gcc-7.3.0.tar.xz
+
+./configure --host=amd64-pc-linux-gnu --program-prefix=arm-elf- --target=arm-elf --disable-threads --with-cpu=arm7tdmi --enable-languages=c
+
+time nice make
+*** Configuration arm-unknown-elf not supported
+Makefile:4150: recipe for target 'configure-gcc' failed
+
+#gcc-4.3.3 complains that arm-elf/bin/as doesn't do -Qy
 
