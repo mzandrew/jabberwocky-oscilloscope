@@ -63,11 +63,15 @@ elf_to_hex_flags = --output-target=ihex
 
 list_of_assembly_language_files = $(list src/*.armasm) $(list src/*.s)
 list_of_c_language_files = $(list src/*.c)
-IF_INSTALLED := $(shell which arm-none-eabi-as 2>/dev/null 1>&2; echo "$$?")
+IS_INSTALLED_1 := $(shell which arm-none-eabi-as 2>/dev/null 1>&2; echo "$$?")
+IS_INSTALLED_2 := $(shell which bc 2>/dev/null 1>&2; echo "$$?")
 
 default :
-ifeq ($(IF_INSTALLED),1)
+ifeq ($(IS_INSTALLED_1),1)
 	sudo apt -y install gcc-arm-none-eabi
+endif
+ifeq ($(IS_INSTALLED_2),1)
+	sudo apt -y install bc
 endif
 #	$(MAKE) -B all
 	$(MAKE) all
