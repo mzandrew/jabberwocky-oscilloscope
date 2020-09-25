@@ -17,6 +17,14 @@ The oscilloscope is battery (rechargable LiPoly) or usb powered, has 2 channels 
 
 The input impedance of this scope is 1MOhm. The analog bandwidth is unknown at this point (and will be until the project is nearly complete). The lab3 can sample billions of times per second, but this oscilloscope will probably only be useful at a much much lower sampling speed. This is due to the choice of input amplifier and multiplexer: The multiplexer has a bandwidth of about 700MHz as does the voltage-feedback operational amplifier.
 
+# files
+
+[PCB schmatic](jabberwocky-PCB-eagle/jabberwocky.schematic.pdf)
+
+[PCB layout](jabberwocky-PCB-eagle/jabberwocky.layout.pdf)
+
+[PCB gerber files](jabberwocky-PCB-eagle/arm7-oscilloscope-gerbers.zip)
+
 # notes
 
 Automatically exported from code.google.com/p/jabberwocky-oscilloscope
